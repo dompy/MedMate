@@ -567,16 +567,54 @@ def determine_hba1c_improvement(previous_hba1c_value, current_hba1c_value):
         return hba1c_improvement_wording, hba1c_category
 
 def create_beurteilung(previous_hba1c_value, current_hba1c_value):
-    hba1c_improvement_wording, hba1c_category = determine_hba1c_improvement(previous_hba1c_value, current_hba1c_value)
-    spacy_output = subprocess.run(['python3', '/Users/nomantscho/PycharmProjects/Berichte_Gen/include_spacy6.py', hba1c_category], capture_output=True, text=True)
-    # Debugging: print raw outputs
-    #print("STDOUT:", spacy_output.stdout)
-    #print("STDERR:", spacy_output.stderr)
-    second_sentence = spacy_output.stdout.strip()  # Use strip() to remove any leading/trailing whitespaces
-    return hba1c_improvement_wording, hba1c_category, second_sentence
+    """
+    Generates a clinical assessment based on HbA1c values.
 
-# Generate entrance sentence depending on previous hba1c date (represents previous consultation date) "Verlaufskontrolle nach x Wochen/Monaten"
+    This function takes previous and current HbA1c values, determines the improvement or decline in HbA1c, runs a subprocess to generate a sentence based on the HbA1c category, and returns the assessment and category along with the generated sentence.
+
+    Args:
+        previous_hba1c_value (float): The previous HbA1c value.
+        current_hba1c_value (float): The current HbA1c value.
+
+    Returns:
+        tuple: A tuple containing:
+            - hba1c_improvement_wording (str): A description of the HbA1c change.
+            - hba1c_category (str): The category of HbA1c change.
+            - second_sentence (str): A sentence generated based on the HbA1c category.
+    """
+    hba1c_improvement_wording, hba1c_category = determine_hba1c_improvement(
+        previous_hba1c_value,
+        current_hba1c_value
+    )
+    
+    spacy_output = subprocess.run(
+        ['python3', 'sentence2.py', hba1c_category], 
+        capture_output=True, 
+        text=True, 
+        check=True
+    )   
+    sentence2 = spacy_output.stdout.strip() # Use strip() to remove any leading/trailing whitespaces
+    return hba1c_improvement_wording, hba1c_category, sentence2
+
+# Generate entrance sentence depending on previous hba1c date (represents previous consultation date)
+# "Verlaufskontrolle nach x Wochen/Monaten"
 def generate_verlaufskontrolle_entrance(previous_hba1c_date):
+    """
+    Generates an entrance sentence for a medical report based on the time elapsed since 
+    the previous HbA1c test date.
+
+    This function takes the date of the previous HbA1c test, 
+    calculates the time interval in weeks or months from the current date, 
+    and generates an entrance sentence indicating the time elapsed since the last test.
+
+    Args:
+        previous_hba1c_date (str): The date of the previous HbA1c test in 
+        '%m/%Y' format (e.g., '04/2021').
+
+    Returns:
+        str: An entrance sentence for the medical report, 
+        indicating the interval since the last HbA1c test in weeks or months.
+    """
     # Convert string date to datetime object assuming format '%m/%Y'
     previous_date = dt.strptime(previous_hba1c_date, '%m/%Y')
     current_date = datetime.datetime.now()
@@ -601,18 +639,49 @@ def generate_verlaufskontrolle_entrance(previous_hba1c_date):
     return entrance_sentence
 
 def main():
+    """
+    Main function to generate a medical report for a patient.
+
+    This function performs several steps to create a comprehensive medical report:
+    1. Loads patient data.
+    2. Generates the patient header including age.
+    3. Selects a primary diagnosis from a list of possible diagnoses.
+    4. Generates details based on the selected primary diagnosis and patient's age.
+    5. Assembles these details into a structured report.
+    6. Generates an entrance sentence for the report based on the previous HbA1c date.
+    7. Creates a sentence assessing the patient's HbA1c improvement.
+    8. Combines all elements into the final report and prints it.
+    """
     # Load patient data
-    pat_first_names, pat_last_names, pat_phone_numbers, pat_streets, pat_street_numbers, pat_postal_codes, pat_cities, pat_ahv_numbers = load_patient_data()
+    (
+        pat_first_names,
+        pat_last_names,
+        pat_phone_numbers,
+        pat_streets,
+        pat_street_numbers,
+        pat_postal_codes,
+        pat_cities,
+        pat_ahv_numbers
+    ) = load_patient_data()
 
     # Generate the patient header
-    header, pat_age = generate_patient_header(pat_first_names, pat_last_names, pat_streets, pat_street_numbers, pat_postal_codes, pat_cities, pat_phone_numbers, pat_ahv_numbers)
+    header, pat_age = generate_patient_header(
+        pat_first_names,
+        pat_last_names,
+        pat_streets,
+        pat_street_numbers,
+        pat_postal_codes,
+        pat_cities,
+        pat_phone_numbers,
+        pat_ahv_numbers
+    )
 
     # List of possible primary diagnoses
     possible_primary_diagnoses = ["Diabetes Mellitus Typ 1"]
 
     # Select a primary diagnosis
     primary_diagnosis = select_primary_diagnosis(possible_primary_diagnoses)
-    
+
     # Generate details based on the selected primary diagnosis
     diagnosis_details_dict = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
 
@@ -624,19 +693,22 @@ def main():
     previous_hba1c_value = diagnosis_details_dict['hba1c']['previous']['value']
     previous_hba1c_date = diagnosis_details_dict['hba1c']['previous']['date']  
 
-    verlaufskontrolle_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
-    hba1c_improvement_wording, hba1c_category, second_sentence = create_beurteilung(previous_hba1c_value, current_hba1c_value)
-    # Debugging: print individual components
-    # print("Verlaufskontrolle Sentence:", verlaufskontrolle_sentence)
-    # print("Second Sentence:", second_sentence)
-    # print("HbA1c Category:", hba1c_category)
-    # Print the results
-    # print(header)
-    # print(assembled_diagnosis_details)
-    final_output = f"{header}\n{assembled_diagnosis_details}\n{verlaufskontrolle_sentence} {second_sentence} {hba1c_improvement_wording}. "
+    entrance_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
+
+    ( 
+        hba1c_improvement_wording,
+        hba1c_category,
+        sentence2
+    ) = create_beurteilung(previous_hba1c_value, current_hba1c_value)
+
+    final_output = (
+    f"{header}\n"
+    f"{assembled_diagnosis_details}\n"
+    f"{entrance_sentence} "
+    f"{sentence2} "
+    f"{hba1c_improvement_wording}. "
+    )
+
     print(final_output)
 
-runtimes = 15
-for i in range(runtimes):
     main()
-

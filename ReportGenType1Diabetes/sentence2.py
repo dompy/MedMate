@@ -206,7 +206,7 @@ def analyze_sentence(local_sentence, local_main_noun, local_helper_noun, local_e
     # Function to analyze and print details of each word in the sentence using Spacy
     return local_sentence
 
-def generate_sentence(local_hba1c_improvement):
+def generate_sentence(hba1c_improvement_wording, hba1c_category):
     """
     Generates a sentence based on the given HbA1c improvement level.
 
@@ -262,7 +262,7 @@ def generate_sentence(local_hba1c_improvement):
         },         
     }
     
-    selected_words = words_for_improvement.get(local_hba1c_improvement, words_for_improvement[random.choice(list(words_for_improvement.keys()))])
+    selected_words = words_for_improvement.get(hba1c_category, words_for_improvement[random.choice(list(words_for_improvement.keys()))])
 
     local_entrance_preposition = random.choice(["Nach", "Unter", "Bei", "Mit", "Dank", "Wegen", "Mit Hilfe", "Durch"])
     local_entrance_adverb = random.choice(selected_words["entrance_adverbs"])
@@ -273,7 +273,7 @@ def generate_sentence(local_hba1c_improvement):
     local_daytime = random.choice(selected_words["daytimes"])
     
     # Initial sentence construction
-    local_sentence = f"{local_entrance_preposition} {local_entrance_adverb} {local_helper_noun} {local_main_noun} {local_main_meal} hat sich {glucose_control} {local_hba1c_improvement}. "
+    local_sentence = f"{local_entrance_preposition} {local_entrance_adverb} {local_helper_noun} {local_main_noun} {local_main_meal} hat sich {glucose_control} {hba1c_improvement_wording}. "
         # ANSI escape code for different colors
     colors = {  
         "RED": "\033[91m",
@@ -331,23 +331,6 @@ def determine_noun_attributes(local_main_noun, local_helper_noun):
 
     return main_noun_gender, main_noun_number, helper_noun_gender
 
-runs = 5
-for i in range(runs):
-    if __name__ == "__main__":
-            hba1c_improvement = random.choice(["deutlich verschlechtert", "verschlechtert", "stabil gehalten", "verbessert", "deutlich verbessert"])
-            sentence, main_noun, helper_noun, entrance_adverb, local_glucose_control = generate_sentence(hba1c_improvement)
-            
-
-            if sentence.strip():
-                matches = tool.check(sentence)
-                analyze_sentence(sentence, main_noun, helper_noun, entrance_adverb)
-
-                for match in matches:
-                    print(f"Rule ID: {match.ruleId}")
-                    print(f"Message: {match.message}")
-                    if match.replacements:
-                        print(f"Suggested Correction: {match.replacements[0]}")
-                    print(f"Context: {match.context}")
-                    print("-----")
-            else: 
-                print("Generated sentence is empty.")
+if __name__ == "__main__":
+    hba1c_improvement = random.choice(["deutlich verschlechtert", "verschlechtert", "stabil gehalten", "verbessert", "deutlich verbessert"])
+    sentence, main_noun, helper_noun, entrance_adverb, local_glucose_control = generate_sentence(hba1c_improvement)
