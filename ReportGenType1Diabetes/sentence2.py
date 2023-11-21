@@ -1,4 +1,20 @@
+"""
+This module generates sentences based on HbA1c improvement categories for diabetes management 
+reports.
 
+It utilizes natural language processing (NLP) tools and German grammar rules to construct sentences 
+that reflect the patient's HbA1c level changes. The module can be run independently 
+for testing or used as part of a larger system to automatically generate parts of medical reports.
+
+Arguments:
+- hba1c_improvement_category (str): A category indicating the change in HbA1c levels 
+  (e.g., 'verbessert', 'stabil gehalten').
+
+Returns:
+- A sentence (str) that describes the HbA1c level change in a medically appropriate
+  and grammatically correct manner.
+"""
+import sys
 import random
 import re
 import spacy
@@ -206,7 +222,7 @@ def analyze_sentence(local_sentence, local_main_noun, local_helper_noun, local_e
     # Function to analyze and print details of each word in the sentence using Spacy
     return local_sentence
 
-def generate_sentence(hba1c_improvement_wording, hba1c_category):
+def generate_sentence(hba1c_improvement_category):
     """
     Generates a sentence based on the given HbA1c improvement level.
 
@@ -221,6 +237,7 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
     
     words_for_improvement = {
         "deutlich verbessert": {
+            "improvement_wordings": ["deutlich verbessert", "stark verbessert", "signifikant verbessert", "relevant verbessert", "merklich verbessert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -229,6 +246,7 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"] # ... other words for this category
         },
         "verbessert": {
+            "improvement_wordings": ["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -237,6 +255,7 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
         },
         "stabil gehalten": {
+            "improvement_wordings": ["stabil gehalten", "stabilisiert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -245,14 +264,16 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
         },
         "verschlechtert": {
+            "improvement_wordings": ["verschlechtert", "etwas verschlechtert", "leicht verschlechtert", "diskret verschlechtert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Reduktion", "Steigerung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
-        },        
+        },
         "deutlich verschlechtert": {
+            "improvement_wordings": ["deutlich verschlechtert", "stark verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Reduktion", "Steigerung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -262,8 +283,8 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
         },         
     }
     
-    selected_words = words_for_improvement.get(hba1c_category, words_for_improvement[random.choice(list(words_for_improvement.keys()))])
-
+    selected_words = words_for_improvement.get(hba1c_improvement_category, {})
+    hba1c_improvement_wording = random.choice(selected_words.get("improvement_wordings", [""]))
     local_entrance_preposition = random.choice(["Nach", "Unter", "Bei", "Mit", "Dank", "Wegen", "Mit Hilfe", "Durch"])
     local_entrance_adverb = random.choice(selected_words["entrance_adverbs"])
     local_helper_noun = random.choice(selected_words["helper_nouns"])
@@ -274,23 +295,6 @@ def generate_sentence(hba1c_improvement_wording, hba1c_category):
     
     # Initial sentence construction
     local_sentence = f"{local_entrance_preposition} {local_entrance_adverb} {local_helper_noun} {local_main_noun} {local_main_meal} hat sich {glucose_control} {hba1c_improvement_wording}. "
-        # ANSI escape code for different colors
-    colors = {  
-        "RED": "\033[91m",
-        "GREEN": "\033[92m",
-        "YELLOW": "\033[93m",
-        "BLUE": "\033[94m",
-        "MAGENTA": "\033[95m",
-        "CYAN": "\033[96m",
-        "WHITE": "\033[97m"
-    }
-    reset = "\033[0m"
-
-    # Set the color code to green
-    color_code = colors["CYAN"]
-
-    # Use the green color code for your sentence
-    print(f"Base Sentence: {color_code + local_sentence + reset}")
     
     # Determine the gender and number of the main noun and helper noun
     main_noun_gender, main_noun_number, helper_noun_gender = determine_noun_attributes(local_main_noun, local_helper_noun)
@@ -332,5 +336,13 @@ def determine_noun_attributes(local_main_noun, local_helper_noun):
     return main_noun_gender, main_noun_number, helper_noun_gender
 
 if __name__ == "__main__":
-    hba1c_improvement = random.choice(["deutlich verschlechtert", "verschlechtert", "stabil gehalten", "verbessert", "deutlich verbessert"])
-    sentence, main_noun, helper_noun, entrance_adverb, local_glucose_control = generate_sentence(hba1c_improvement)
+    if len(sys.argv) == 2:
+        # Run as subprocess, with the category provided as an argument
+        hba1c_improvement_category = sys.argv[1]
+    else:
+        # Run independently, provide a default category or prompt for input
+        print("Running in standalone mode. Please enter an HbA1c improvement category:")
+        hba1c_improvement_category = input("Enter category (e.g., 'verbessert', 'stabil gehalten'): ")
+
+    sentence, main_noun, helper_noun, entrance_adverb, glucose_control = generate_sentence(hba1c_improvement_category)
+    print(sentence)

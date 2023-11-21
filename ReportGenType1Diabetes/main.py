@@ -546,25 +546,20 @@ def determine_hba1c_improvement(previous_hba1c_value, current_hba1c_value):
     hba1c_improvement = previous_hba1c_value - current_hba1c_value
     # Determine the improvement category
     if hba1c_improvement >= significant_improvement_threshold:
-        hba1c_category = "deutlich verbessert"
-        hba1c_improvement_wording = random.choice(["deutlich verbessert", "stark verbessert", "signifikant verbessert", "relevant verbessert", "merklich verbessert"])
-        return hba1c_improvement_wording, hba1c_category
+        hba1c_improvement_category = "deutlich verbessert"
+        return hba1c_improvement_category
     elif 0 < hba1c_improvement < significant_improvement_threshold:
-        hba1c_category = "verbessert"
-        hba1c_improvement_wording = random.choice(["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert"])
-        return hba1c_improvement_wording, hba1c_category
+        hba1c_improvement_category = "verbessert"
+        return hba1c_improvement_category
     elif -0.5 <= hba1c_improvement <= 0.5:
-        hba1c_category = "stabil gehalten"
-        hba1c_improvement_wording = random.choice(["stabil gehalten", "stabilisiert"])
-        return hba1c_improvement_wording, hba1c_category
+        hba1c_improvement_category = "stabil gehalten"
+        return hba1c_improvement_category
     elif significant_weakening_threshold < hba1c_improvement < -0.5:
-        hba1c_category = "verschlechtert"
-        hba1c_improvement_wording = random.choice(["verschlechtert", "etwas verschlechtert", "leicht verschlechtert", "diskret verschlechtert"])
-        return hba1c_improvement_wording, hba1c_category
+        hba1c_improvement_category = "verschlechtert"
+        return hba1c_improvement_category
     else:
-        hba1c_category = "deutlich verschlechtert"
-        hba1c_improvement_wording = random.choice(["deutlich verschlechtert", "stark verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"])
-        return hba1c_improvement_wording, hba1c_category
+        hba1c_improvement_category = "deutlich verschlechtert"
+        return hba1c_improvement_category
 
 def create_beurteilung(previous_hba1c_value, current_hba1c_value):
     """
@@ -579,22 +574,26 @@ def create_beurteilung(previous_hba1c_value, current_hba1c_value):
     Returns:
         tuple: A tuple containing:
             - hba1c_improvement_wording (str): A description of the HbA1c change.
-            - hba1c_category (str): The category of HbA1c change.
+            - hba1c_improvement_category (str): The category of HbA1c change.
             - second_sentence (str): A sentence generated based on the HbA1c category.
     """
-    hba1c_improvement_wording, hba1c_category = determine_hba1c_improvement(
+    hba1c_improvement_category = determine_hba1c_improvement(
         previous_hba1c_value,
         current_hba1c_value
     )
     
     spacy_output = subprocess.run(
-        ['python3', 'sentence2.py', hba1c_category], 
-        capture_output=True, 
-        text=True, 
-        check=True
-    )   
-    sentence2 = spacy_output.stdout.strip() # Use strip() to remove any leading/trailing whitespaces
-    return hba1c_improvement_wording, hba1c_category, sentence2
+        ['python3', 'sentence2.py', hba1c_improvement_category],
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    print("Standard Output:", spacy_output.stdout)
+    print("Error Output:", spacy_output.stderr)
+    sentence2 = spacy_output.stdout.strip()
+
+    return hba1c_improvement_category, sentence2
+
 
 # Generate entrance sentence depending on previous hba1c date (represents previous consultation date)
 # "Verlaufskontrolle nach x Wochen/Monaten"
@@ -696,8 +695,7 @@ def main():
     entrance_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
 
     ( 
-        hba1c_improvement_wording,
-        hba1c_category,
+        hba1c_improvement_category,
         sentence2
     ) = create_beurteilung(previous_hba1c_value, current_hba1c_value)
 
@@ -705,10 +703,9 @@ def main():
     f"{header}\n"
     f"{assembled_diagnosis_details}\n"
     f"{entrance_sentence} "
-    f"{sentence2} "
-    f"{hba1c_improvement_wording}. "
+    f"{sentence2}"
     )
 
     print(final_output)
 
-    main()
+main()
