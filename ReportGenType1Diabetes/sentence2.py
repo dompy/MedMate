@@ -117,12 +117,18 @@ def apply_german_grammar(local_sentence, entrance_preposition, main_noun_gender,
     if main_meal_number == "Plur":
         meal_article = articles["Dativ"].get("Plur", "den")
 
-    # Add time preposition and article for the meal
-    time_prep = random.choice(time_prepositions)
-    full_prep_phrase = f"{time_prep} {meal_article} {main_meal}"
-    contracted_prep_phrase = apply_contractions(full_prep_phrase)
+    # Add time preposition and article for the meal and check for invalid combination (e.g. Bolus after meal, Bolus-Eat-Intervall after meal and so on)
+    valid_combination = False
+    while not valid_combination:
+        time_prep = random.choice(time_prepositions)
+        full_prep_phrase = f"{time_prep} {meal_article} {main_meal}"
+        contracted_prep_phrase = apply_contractions(full_prep_phrase)
+
+        valid_combination = is_valid_combination(time_prep, local_main_noun)
+
     # Construct the sentence with the meal name and its article
     local_sentence = local_sentence.replace(main_meal, contracted_prep_phrase)
+
     # Determine the gender and number of local_glucose_control
     glucose_control_gender, glucose_control_number, _ = determine_noun_attributes(glucose_control, "")
 
@@ -134,7 +140,7 @@ def apply_german_grammar(local_sentence, entrance_preposition, main_noun_gender,
 
     return local_sentence, time_prep
 
-def is_valid_combination(local_time_prep, local_main_noun, main_meal):
+def is_valid_combination(local_time_prep, local_main_noun):
     """
     Checks if the combination of time preposition, main noun, and main meal is valid.
 
@@ -148,6 +154,9 @@ def is_valid_combination(local_time_prep, local_main_noun, main_meal):
     """
     # Define invalid combinations
     invalid_combinations = {
+        "Bolus": {
+            "time_prepositions": ["nach"]
+        },
         "Bolus-Ess-Abstand": {
             "time_prepositions": ["nach"]
         }, 
@@ -158,6 +167,9 @@ def is_valid_combination(local_time_prep, local_main_noun, main_meal):
             "time_prepositions": ["nach", "vor"]
         },
         "Kohlenhydratfaktoren": {
+            "time_prepositions": ["nach"]
+        },
+        "Kohlenhydratzufuhr": {
             "time_prepositions": ["nach"]
         }
     }
@@ -259,7 +271,7 @@ def analyze_sentence(local_sentence, local_main_noun, local_helper_noun, local_e
     # Function to analyze and print details of each word in the sentence using Spacy
     return local_sentence
 
-def generate_sentence(hba1c_improvement_category):
+def generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_hba1c_value):
     """
     Generates a sentence based on the given HbA1c improvement level.
 
@@ -316,8 +328,8 @@ def generate_sentence(hba1c_improvement_category):
         "deutlich verschlechtert": {
             "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Wegen", "Durch", "Aufgrund"],
             "improvement_wordings": ["deutlich verschlechtert", "sehr verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
-            "entrance_adverbs": ["persistierend", "stark", "imponierend", "zu gering"],
-            "helper_nouns": ["Anpassung", "Reduktion", "Steigerung"],
+            "entrance_adverbs": ["persistierend", "zu stark", "imponierend", "zu gering"],
+            "helper_nouns": ["Reduktion", "Steigerung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
@@ -325,6 +337,8 @@ def generate_sentence(hba1c_improvement_category):
         },         
     }
     
+
+
     selected_words = words_for_improvement.get(hba1c_improvement_category, {})
     hba1c_improvement_wording = random.choice(selected_words["improvement_wordings"])
     local_entrance_preposition = random.choice(selected_words["entrance_prepositions"])
@@ -378,13 +392,14 @@ def determine_noun_attributes(local_main_noun, local_helper_noun):
     return main_noun_gender, main_noun_number, helper_noun_gender
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 4:
         # Run as subprocess, with the category provided as an argument
         hba1c_improvement_category = sys.argv[1]
+        previous_hba1c_value = sys.argv[2]
+        current_hba1c_value = sys.argv[3]
     else:
         # Run independently, provide a default category or prompt for input
         print("Running in standalone mode. Please enter an HbA1c improvement category:")
         hba1c_improvement_category = input("Enter category (e.g., 'verbessert', 'stabil gehalten'): ")
-
-    sentence, main_noun, helper_noun, entrance_adverb, glucose_control = generate_sentence(hba1c_improvement_category)
+    sentence, main_noun, helper_noun, entrance_adverb, glucose_control = generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_hba1c_value)
     print(sentence)

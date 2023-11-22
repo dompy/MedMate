@@ -307,7 +307,7 @@ def generate_cvrisk_factors(pat_age):
         cvrisk_factors_details.append("Arterielle Hypertonie")
     
     # Dyslipidämie with LDL target
-    ldl_targets = ["< 1.4 mmol/l", "< 1.8 mmol/l", "< 2.4 mmol/l"]
+    ldl_targets = ["< x.y mmol/l", "< y.z mmol/l", "< z.z mmol/l"]
     if random.choice([True, False]):
         ldl_target = random.choice(ldl_targets)
         cvrisk_factors_details.append(f"Dyslipidämie (Ziel-LDL {ldl_target})")
@@ -319,12 +319,11 @@ def generate_cvrisk_factors(pat_age):
     if random.choice([True, False]):
         grade = random.choice(adipositas_grades)
         bmi = round(random.uniform(25, 40), 1)  # Random BMI value
-        cvrisk_factors_details.append(f"Adipositas {grade} (BMI {bmi} kg/m2 {current_month}/{current_year})")
+        cvrisk_factors_details.append(f"Adipositas {grade} (BMI {bmi} kg/m² {current_month}/{current_year})")
     
     # Nikotinabusus with pack years and date or smoking history if they've stopped
     smoking_status = generate_smoking_status(pat_age)
     cvrisk_factors_details.append(smoking_status)
-
     
     # Positive Familienanamnese with event and relative's age
     events = ["Myokardinfarkt", "Schlaganfall", "zerebrovaskulärer Insult"]
@@ -361,10 +360,17 @@ def generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors_details)
     Generate details for late complications.
     """
     complications_details = []
-    
-    # Add "Koronare Herzkrankheit" if there are 2 or more CV risk factors and patient is 50 or older
-    if len(cvrisk_factors_details.split(", ")) >= 2 and pat_age >= 50:
+    cv_risk_factors = cvrisk_factors_details.split(", ")
+
+    # Check for dyslipidemia and add KHK if criteria are met
+    has_dyslipidemia = "Dyslipidemia" in cv_risk_factors
+    if len(cv_risk_factors) >= 2 and pat_age >= 50:
+        if not has_dyslipidemia:
+            cv_risk_factors.append("Dyslipidemia")
         complications_details.append("Koronare Herzkrankheit")
+
+    # Update the cvrisk_factors_details string
+    cvrisk_factors_details = ", ".join(cv_risk_factors)
 
     # Nephropathie with CKD stage and date
     last_screening_date_nephro = generate_random_date_within_1_3_years()
@@ -453,12 +459,11 @@ def generate_details_typ1(pat_age, primary_diagnosis):
 
     # AGP-Details of HCL-System 
     
-
     # HbA1c values
     current_month = datetime.datetime.now().month
     current_year = datetime.datetime.now().year
-    current_hba1c = round(random.uniform(5.0, 12.9), 1)  # Generate current hba1c
-    previous_hba1c = round(random.uniform(5.0, 12.9), 1)  # Generate previous hba1c
+    current_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
+    previous_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
     previous_hba1c_date = generate_previous_hba1c_date(previous_hba1c, current_month, current_year)
 
    # Populate the hba1c nested dictionary
@@ -494,8 +499,6 @@ def generate_details_typ1(pat_age, primary_diagnosis):
     details_dict["spätkomplikationen"] = spätkomplikationen
 
     return details_dict, current_hba1c
-
-
 
 def assemble_details(details_dict):
     assembled_details = []
@@ -540,24 +543,36 @@ def generate_details_based_on_diagnosis(diagnosis, pat_age):
     else:
         return {}
 
+def determine_hba1c_score(current_hba1c_value, previous_hba1c_value, hba1c_improvement_category):
+    # Initial values
+    hba1c_score = 0
+    hba1c_wording = ""
 
-def determine_hba1c_score(current_hba1c_value):
     if 4.5 <= current_hba1c_value <= 5.9:
         hba1c_score = 1
         hba1c_wording = "sehr gut"
+        if previous_hba1c_value < 6 and current_hba1c_value < 6:
+            if hba1c_improvement_category in ["verbessert", "deutlich verbessert"]:
+                hba1c_wording = "weiterhin sehr gut"
     elif 5.9 < current_hba1c_value <= 6.9:
         hba1c_score = 2
         hba1c_wording = "gut"
+        if previous_hba1c_value < 7 and current_hba1c_value < 7:
+            if hba1c_improvement_category in ["verbessert", "deutlich verbessert"]:
+                hba1c_wording = "weiterhin gut"        
     elif 6.9 < current_hba1c_value <= 7.9:
         hba1c_score = 3
         hba1c_wording = "zufriedenstellend"
+        if previous_hba1c_value < 8 and current_hba1c_value < 8:
+            if hba1c_improvement_category in ["verbessert", "deutlich verbessert"]:
+                hba1c_wording = "weiterhin zufriedenstellend"          
     elif current_hba1c_value > 7.9:
         hba1c_score = 4
         hba1c_wording = "optimierungsfähig"
-    else:
-        hba1c_score = 0  # Default score for invalid values
+        if previous_hba1c_value > 8 and current_hba1c_value > 8:
+            if hba1c_improvement_category in ["verbessert", "deutlich verbessert"]:
+                hba1c_wording = "weiterhin optimierungsfähig"   
     return hba1c_score, hba1c_wording
-
 
 def determine_hba1c_improvement(previous_hba1c_value, current_hba1c_value):
     # Define the threshold for a significant improvement
@@ -603,8 +618,12 @@ def create_beurteilung(previous_hba1c_value, current_hba1c_value):
         current_hba1c_value
     )
     
+    # Convert float values to strings
+    prev_hba1c_str = str(previous_hba1c_value)
+    curr_hba1c_str = str(current_hba1c_value)
+
     spacy_output = subprocess.run(
-        ['python3', 'sentence2.py',hba1c_improvement_category],
+        ['python3', 'sentence2.py', hba1c_improvement_category, prev_hba1c_str, curr_hba1c_str],
         capture_output=True,
         text=True,
         check=False
@@ -656,8 +675,6 @@ def generate_verlaufskontrolle_entrance(previous_hba1c_date):
     entrance_sentence = f"\n\033[1;34mBeurteilung\033[0m\nVerlaufskontrolle nach {interval} {unit}."
 
     return entrance_sentence
-
-
 
 def main():
     """
@@ -714,17 +731,33 @@ def main():
     current_hba1c_value = diagnosis_details_dict['hba1c']['current']['value']
     previous_hba1c_value = diagnosis_details_dict['hba1c']['previous']['value']
     previous_hba1c_date = diagnosis_details_dict['hba1c']['previous']['date']  
+
     # Call determine_hba1c_score to calculate the score and wording
-    # Call determine_hba1c_score to calculate the score and wording
-    hba1c_score, hba1c_wording = determine_hba1c_score(current_hba1c_value)
-    hba1c_sentence = f"Die Blutzuckereinstellung ist {hba1c_wording}."
+    hba1c_improvement_category, sentence2 = create_beurteilung(previous_hba1c_value, current_hba1c_value)
+    hba1c_score, hba1c_wording = determine_hba1c_score(current_hba1c_value, previous_hba1c_value, hba1c_improvement_category)
+    
+    # Check the hba1c_wording
+    if hba1c_wording == "weiterhin optimierungsfähig":
+        # Define the list of possible improvement wordings
+        improvement_wordings = [
+        "deutlich verbessert", "stark verbessert", "signifikant verbessert", 
+        "relevant verbessert", "merklich verbessert", "verbessert", 
+        "leicht verbessert", "etwas verbessert", "diskret verbessert"
+        ]
+        bereits_dict = ["bereits ", "jedoch bereits ", "bereits schon "]
+        bereits = random.choice(bereits_dict)        
+        # Check and prepend "bereits" to the improvement wording in the sentence
+        for wording in improvement_wordings:
+            if wording in sentence2:
+                sentence2 = sentence2.replace(wording, bereits + wording)
+                break  # Assuming only one improvement wording appears in the sentence
+
+
+    ist_dict = ["ist", "zeigt sich"]
+    ist = random.choice(ist_dict)
+    hba1c_sentence = f"Die Blutzuckereinstellung {ist} {hba1c_wording}."
 
     entrance_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
-
-    ( 
-        hba1c_improvement_category,
-        sentence2
-    ) = create_beurteilung(previous_hba1c_value, current_hba1c_value)
 
     final_output = (
     f"{header}\n"
