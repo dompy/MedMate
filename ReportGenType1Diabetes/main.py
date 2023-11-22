@@ -493,7 +493,9 @@ def generate_details_typ1(pat_age, primary_diagnosis):
     spätkomplikationen = generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors)
     details_dict["spätkomplikationen"] = spätkomplikationen
 
-    return details_dict
+    return details_dict, current_hba1c
+
+
 
 def assemble_details(details_dict):
     assembled_details = []
@@ -537,6 +539,25 @@ def generate_details_based_on_diagnosis(diagnosis, pat_age):
     # Here you can add other diagnoses and their respective detail generation in the future.
     else:
         return {}
+
+
+def determine_hba1c_score(current_hba1c_value):
+    if 4.5 <= current_hba1c_value <= 5.9:
+        hba1c_score = 1
+        hba1c_wording = "sehr gut"
+    elif 5.9 < current_hba1c_value <= 6.9:
+        hba1c_score = 2
+        hba1c_wording = "gut"
+    elif 6.9 < current_hba1c_value <= 7.9:
+        hba1c_score = 3
+        hba1c_wording = "zufriedenstellend"
+    elif current_hba1c_value > 7.9:
+        hba1c_score = 4
+        hba1c_wording = "optimierungsfähig"
+    else:
+        hba1c_score = 0  # Default score for invalid values
+    return hba1c_score, hba1c_wording
+
 
 def determine_hba1c_improvement(previous_hba1c_value, current_hba1c_value):
     # Define the threshold for a significant improvement
@@ -583,7 +604,7 @@ def create_beurteilung(previous_hba1c_value, current_hba1c_value):
     )
     
     spacy_output = subprocess.run(
-        ['python3', 'sentence2.py', hba1c_improvement_category],
+        ['python3', 'sentence2.py',hba1c_improvement_category],
         capture_output=True,
         text=True,
         check=False
@@ -593,7 +614,6 @@ def create_beurteilung(previous_hba1c_value, current_hba1c_value):
     sentence2 = spacy_output.stdout.strip()
 
     return hba1c_improvement_category, sentence2
-
 
 # Generate entrance sentence depending on previous hba1c date (represents previous consultation date)
 # "Verlaufskontrolle nach x Wochen/Monaten"
@@ -636,6 +656,8 @@ def generate_verlaufskontrolle_entrance(previous_hba1c_date):
     entrance_sentence = f"\n\033[1;34mBeurteilung\033[0m\nVerlaufskontrolle nach {interval} {unit}."
 
     return entrance_sentence
+
+
 
 def main():
     """
@@ -682,7 +704,8 @@ def main():
     primary_diagnosis = select_primary_diagnosis(possible_primary_diagnoses)
 
     # Generate details based on the selected primary diagnosis
-    diagnosis_details_dict = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
+    diagnosis_details_dict, _ = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
+
 
     # Assemble the diagnosis details
     assembled_diagnosis_details = assemble_details(diagnosis_details_dict)
@@ -691,6 +714,10 @@ def main():
     current_hba1c_value = diagnosis_details_dict['hba1c']['current']['value']
     previous_hba1c_value = diagnosis_details_dict['hba1c']['previous']['value']
     previous_hba1c_date = diagnosis_details_dict['hba1c']['previous']['date']  
+    # Call determine_hba1c_score to calculate the score and wording
+    # Call determine_hba1c_score to calculate the score and wording
+    hba1c_score, hba1c_wording = determine_hba1c_score(current_hba1c_value)
+    hba1c_sentence = f"Die Blutzuckereinstellung ist {hba1c_wording}."
 
     entrance_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
 
@@ -703,6 +730,7 @@ def main():
     f"{header}\n"
     f"{assembled_diagnosis_details}\n"
     f"{entrance_sentence} "
+    f"{hba1c_sentence} "
     f"{sentence2}"
     )
 

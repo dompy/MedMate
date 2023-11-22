@@ -132,7 +132,44 @@ def apply_german_grammar(local_sentence, entrance_preposition, main_noun_gender,
     # Apply the article to the glucose control noun in the sentence
     local_sentence = local_sentence.replace(glucose_control, f"{glucose_control_article} {glucose_control}")
 
-    return local_sentence
+    return local_sentence, time_prep
+
+def is_valid_combination(local_time_prep, local_main_noun, main_meal):
+    """
+    Checks if the combination of time preposition, main noun, and main meal is valid.
+
+    Parameters:
+    local_time_prep (str): The time preposition used in the sentence.
+    local_main_noun (str): The main noun in the sentence.
+    main_meal (str): The main meal in the sentence.
+
+    Returns:
+    bool: True if the combination is valid, False otherwise.
+    """
+    # Define invalid combinations
+    invalid_combinations = {
+        "Bolus-Ess-Abstand": {
+            "time_prepositions": ["nach"]
+        }, 
+        "Mahlzeiten-Bolus": {
+            "time_prepositions": ["nach"]
+        },
+        "Kohlenhydratmenge": {
+            "time_prepositions": ["nach", "vor"]
+        },
+        "Kohlenhydratfaktoren": {
+            "time_prepositions": ["nach"]
+        }
+    }
+
+    # Check for invalid combinations
+    if local_main_noun in invalid_combinations:
+        invalid_time_preps = invalid_combinations[local_main_noun]["time_prepositions"]
+        if local_time_prep in invalid_time_preps:
+            return False
+    
+    return True
+
 
 # Function to get the correct article
 def get_article(noun_gender, noun_number, noun_case):
@@ -237,46 +274,51 @@ def generate_sentence(hba1c_improvement_category):
     
     words_for_improvement = {
         "deutlich verbessert": {
+            "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Dank", "Mit Hilfe", "Durch"],
             "improvement_wordings": ["deutlich verbessert", "stark verbessert", "signifikant verbessert", "relevant verbessert", "merklich verbessert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
-            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
+            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"] # ... other words for this category
         },
         "verbessert": {
+            "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Dank", "Mit Hilfe", "Durch"],
             "improvement_wordings": ["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
-            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
+            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
         },
         "stabil gehalten": {
+            "entrance_prepositions": ["Unter", "Bei", "Mit"],
             "improvement_wordings": ["stabil gehalten", "stabilisiert"],
-            "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
-            "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
-            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
+            "entrance_adverbs": ["gewissenhaft", "konsequent"],
+            "helper_nouns": ["Optimierungsversuchen", "Umsetzung", "Einhaltung", "Verbesserung"],
+            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
         },
         "verschlechtert": {
+            "entrance_prepositions": ["Nach", "Unter", "Bei", "Wegen", "Durch"],
             "improvement_wordings": ["verschlechtert", "etwas verschlechtert", "leicht verschlechtert", "diskret verschlechtert"],
-            "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
+            "entrance_adverbs": ["weniger konsequent", "weniger umgesetzt"],
             "helper_nouns": ["Anpassung", "Reduktion", "Steigerung"],
-            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
+            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
         },
         "deutlich verschlechtert": {
-            "improvement_wordings": ["deutlich verschlechtert", "stark verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
-            "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
+            "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Wegen", "Durch", "Aufgrund"],
+            "improvement_wordings": ["deutlich verschlechtert", "sehr verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
+            "entrance_adverbs": ["persistierend", "stark", "imponierend", "zu gering"],
             "helper_nouns": ["Anpassung", "Reduktion", "Steigerung"],
-            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydrate", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
+            "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
             "daytimes": ["Vormittag", "Mittag", "Nachmittag", "Abend"]            # ... words for 'verbessert' category
@@ -284,8 +326,8 @@ def generate_sentence(hba1c_improvement_category):
     }
     
     selected_words = words_for_improvement.get(hba1c_improvement_category, {})
-    hba1c_improvement_wording = random.choice(selected_words.get("improvement_wordings", [""]))
-    local_entrance_preposition = random.choice(["Nach", "Unter", "Bei", "Mit", "Dank", "Wegen", "Mit Hilfe", "Durch"])
+    hba1c_improvement_wording = random.choice(selected_words["improvement_wordings"])
+    local_entrance_preposition = random.choice(selected_words["entrance_prepositions"])
     local_entrance_adverb = random.choice(selected_words["entrance_adverbs"])
     local_helper_noun = random.choice(selected_words["helper_nouns"])
     local_main_noun = random.choice(selected_words["main_nouns"])
@@ -301,7 +343,7 @@ def generate_sentence(hba1c_improvement_category):
 
     if main_noun_gender and helper_noun_gender:
         # Apply grammar rules and construct the sentence
-        local_sentence = apply_german_grammar(local_sentence, local_entrance_preposition, main_noun_gender, main_noun_number, helper_noun_gender, selected_words["entrance_adverbs"], local_main_noun, local_main_meal,    glucose_control)
+        local_sentence, _ = apply_german_grammar(local_sentence, local_entrance_preposition, main_noun_gender, main_noun_number, helper_noun_gender, selected_words["entrance_adverbs"], local_main_noun, local_main_meal, glucose_control)
 
     return local_sentence, local_main_noun, local_helper_noun, local_entrance_adverb, glucose_control
 
