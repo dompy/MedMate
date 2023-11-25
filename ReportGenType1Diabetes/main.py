@@ -6,8 +6,8 @@ import pint
 import datetime
 from datetime import datetime as dt, timedelta
 from dateutil.relativedelta import relativedelta
-
-
+from qrisk3male import cvd_male_raw
+from qrisk3female import cvd_female_raw
 ureg = pint.UnitRegistry()
 def load_patient_data():
 # Provided patient data lists
@@ -110,7 +110,7 @@ def generate_patient_header(first_names, last_names, streets, street_numbers, po
     """Generate patient report."""
     first_name, last_name, pat_gender = generate_name(first_names, last_names)
     pat_street, pat_street_number, pat_postal_code, pat_city = generate_address(streets, street_numbers, postal_codes, cities)
-    pat_birth_date, age = generate_pat_birth_date()
+    pat_birth_date, pat_age = generate_pat_birth_date()
     pat_ahv_number = generate_ahv_number(ahv_numbers)
     pat_phone_number = generate_phone_number(phone_numbers)
     
@@ -122,7 +122,7 @@ def generate_patient_header(first_names, last_names, streets, street_numbers, po
     report += f"{first_name} {last_name}, {pat_birth_date}, {pat_gender}\n"
     report += f"{pat_street} {pat_street_number}, {pat_postal_code} {pat_city}, {pat_ahv_number}, {pat_phone_number}\n"
     report += "\n\033[1;34mDiagnosen\033[0m"
-    return report, age
+    return report, pat_age, pat_gender
 
 #type-1-diagnose helper functions
 def generate_akutkomplikationen(prim_diagnosis_year):
@@ -307,15 +307,14 @@ def generate_cvrisk_factors(pat_age):
         cvrisk_factors_details.append("Arterielle Hypertonie")
     
     # Dyslipidämie with LDL target
-    ldl_targets = ["< x.y mmol/l", "< y.z mmol/l", "< z.z mmol/l"]
     if random.choice([True, False]):
-        ldl_target = random.choice(ldl_targets)
-        cvrisk_factors_details.append(f"Dyslipidämie (Ziel-LDL {ldl_target})")
+        cvrisk_factors_details.append(f"Dyslipidämie")
     
     # Adipositas with BMI and date
     adipositas_grades = ["Grad I", "Grad II", "Grad III"]
     current_month = datetime.datetime.now().month
     current_year = datetime.datetime.now().year
+    bmi = round(random.uniform(20, 24), 1)  # Random BMI value
     if random.choice([True, False]):
         grade = random.choice(adipositas_grades)
         bmi = round(random.uniform(25, 40), 1)  # Random BMI value
@@ -334,7 +333,158 @@ def generate_cvrisk_factors(pat_age):
         age = random.randint(40, 70)  # Random age for the relative's event
         cvrisk_factors_details.append(f"positive Familienanamnese ({event} bei {relative} im Alter von {age} Jahren)")
     
-    return ", ".join(cvrisk_factors_details)
+    return ", ".join(cvrisk_factors_details), bmi
+
+def generate_qrisk3_score_m(pat_age, weitere_diagnosen, primary_diagnosis, bmi, systolic, ldl_cholesterol, is_smoker, has_smoking_history, cvrisk_factors):
+    # Boolean indicators from weitere_diagnosen
+    b_AF = int("Vorhofflimmern" in weitere_diagnosen)
+    b_atypicalantipsy = int("Antipsychotika" in weitere_diagnosen)
+    b_corticosteroids = int("Dauersteroidtherapie" in weitere_diagnosen)
+    b_impotence2 = int("Erektile Dysfunktion" in weitere_diagnosen)
+    b_migraine = int("Migräne" in weitere_diagnosen)
+    b_ra = int("Rheumatoide Arthritis" in weitere_diagnosen)
+    b_renal = 0  # Default value, assuming no renal disease
+    b_sle = int("Lupus" in weitere_diagnosen)
+    b_semi = random.choice([1, 0])
+    b_treatedhyp = int("Arterielle Hypertonie" in cvrisk_factors)
+    b_type1 = int("Typ 1" in primary_diagnosis)
+    b_type2 = int("Typ 2" in primary_diagnosis)
+    ethrisk = random.choice([1, 0])  # Ethrisk value can be refined further
+    fh_cvd = int("positive Familienanamnese" in cvrisk_factors)
+    
+    # Additional parameters for QRISK3
+    rati = ldl_cholesterol / random.uniform(1.2, 2.2)  # Ratio calculation
+    sbps5 = random.randint(2, 20)  # Systolic blood pressure standard deviation
+    smoke_cat = 3 if is_smoker else (1 if has_smoking_history else 0)
+    surv = 10  # Survival rate (can be adjusted if needed)
+    town = 0   # Town value (can be refined further)
+
+    # Call QRISK3 function with these parameters
+    qrisk3_score = cvd_male_raw(pat_age, b_AF, b_atypicalantipsy, b_corticosteroids, b_impotence2, b_migraine, b_ra, b_renal, b_semi, b_sle, b_treatedhyp, b_type1, b_type2, bmi, ethrisk, fh_cvd, rati, systolic, sbps5, smoke_cat, surv, town)
+    
+    return qrisk3_score
+
+def generate_qrisk3_score_w(pat_age, weitere_diagnosen, primary_diagnosis, bmi, systolic, ldl_cholesterol, is_smoker, has_smoking_history, cvrisk_factors):
+    # Boolean indicators from weitere_diagnosen
+    b_AF = int("Vorhofflimmern" in weitere_diagnosen)
+    b_atypicalantipsy = int("Antipsychotika" in weitere_diagnosen)
+    b_corticosteroids = int("Dauersteroidtherapie" in weitere_diagnosen)
+    b_migraine = int("Migräne" in weitere_diagnosen)
+    b_ra = int("Rheumatoide Arthritis" in weitere_diagnosen)
+    b_renal = 0  # Default value, assuming no renal disease
+    b_sle = int("Lupus" in weitere_diagnosen)
+    b_semi = random.choice([1, 0])
+    b_treatedhyp = int("Arterielle Hypertonie" in cvrisk_factors)
+    b_type1 = int("Typ 1" in primary_diagnosis)
+    b_type2 = int("Typ 2" in primary_diagnosis)
+    ethrisk = random.choice([1, 0])  # Ethrisk value can be refined further
+    fh_cvd = int("positive Familienanamnese" in cvrisk_factors)
+    
+    # Additional parameters for QRISK3
+    rati = ldl_cholesterol / random.uniform(1.2, 2.2)  # Ratio calculation
+    sbps5 = random.randint(2, 20)  # Systolic blood pressure standard deviation
+    smoke_cat = 3 if is_smoker else (1 if has_smoking_history else 0)
+    surv = 10  # Survival rate (can be adjusted if needed)
+    town = 0   # Town value (can be refined further)
+
+    # Call QRISK3 function with these parameters
+    qrisk3_score_w = cvd_female_raw(pat_age, b_AF, b_atypicalantipsy, b_corticosteroids, b_migraine, b_ra, b_renal, b_semi, b_sle, b_treatedhyp, b_type1, b_type2, bmi, ethrisk, fh_cvd, rati, systolic, sbps5, smoke_cat, surv, town)
+    
+    return qrisk3_score_w
+def generate_blood_pressure(pat_age, pat_gender, has_diabetes, has_obesity, has_smoking_history):
+    """
+    Generates a realistic blood pressure reading based on patient's age, gender, diabetes, and obesity status.
+    Blood pressure is represented as a tuple (systolic, diastolic).
+
+    Args:
+    age (int): The age of the patient.
+    gender (str): The gender of the patient ('m' for male, 'w' for female).
+    has_diabetes (bool): Whether the patient has diabetes.
+    has_obesity (bool): Whether the patient is obese.
+
+    Returns:
+    tuple: A tuple representing systolic and diastolic blood pressure (mmHg).
+    """
+    # Base blood pressure range (systolic, diastolic)
+    bp_range = {
+        "normal": (90, 120),
+        "high": (121, 140)
+    }
+    # Select 'high' range for approximately 1 in 15 patients
+    bp_key = "high" if random.randint(1, 15) == 1 else "normal"
+    # Adjustments for age, gender, diabetes, and obesity
+    age_adjustment = (pat_age - 30) // 10 * 5 if pat_age > 30 else 0
+    gender_adjustment = 5 if pat_gender == "m" and pat_age < 60 else -5 if pat_gender == "w" and pat_age > 60 else 0
+    diabetes_adjustment = 10 if has_diabetes else 0
+    obesity_adjustment = 10 if has_obesity else 0
+    smoking_adjustment = 5 if has_smoking_history else 0
+    # Calculate blood pressure
+    systolic = random.randint(*bp_range[bp_key]) + age_adjustment + gender_adjustment + diabetes_adjustment + obesity_adjustment + smoking_adjustment
+    diastolic = random.randint(60, 80) + age_adjustment // 2
+
+    # Ensure systolic is greater than diastolic
+    systolic = max(systolic, diastolic + 10)
+
+    return systolic, diastolic, bp_key
+
+def def_familial_hypercholesterolemia():
+    """
+    Randomly determines if a patient has a family history of Familial Hypercholesterolemia (FH).
+
+    Returns:
+    str: 'HeFH' for Heterozygous FH, 'HoFH' for Homozygous FH, or 'None' for no FH.
+    """
+    # Probabilities based on prevalence
+    probability_HeFH = 1 / 225  # Average of 1 in 200 and 1 in 250
+    probability_HoFH = 1 / 230000  # Average of 1 in 160,000 and 1 in 300,000
+
+    # Randomly determine if patient has FH
+    if random.random() < probability_HoFH:
+        return 'HoFH'
+    elif random.random() < probability_HeFH:
+        return 'HeFH'
+    else:
+        return 'None'
+
+def generate_ldl_cholesterol(pat_age, pat_gender, has_obesity, is_smoker, has_diabetes, family_history):
+    # Base LDL range in mmol/L
+    base_ldl = random.uniform(1.3, 3.4)  # Roughly equivalent to 50-130 mg/dL
+
+    # Modifiable risk factor adjustments
+    diet_adjustment = random.uniform(0, 0.52)  # Assumes diet impact
+    obesity_adjustment = 0.26 if has_obesity else 0  # Assumes obesity impact
+    smoking_adjustment = 0.13 if is_smoker else 0  # Assumes smoking impact
+    alcohol_adjustment = random.uniform(0, 0.26)  # Assumes alcohol impact
+    diabetes_adjustment = 0.26 if has_diabetes else 0 # Assumes alcohol impact
+
+    # Non-modifiable risk factor adjustments
+    age_gender_adjustment = ((pat_age - 20) // 10 * 0.13) if pat_age > 20 else 0  # Equivalent to 0.13 mmol/l per decade
+    age_gender_adjustment += -0.26 if pat_gender == "w" and pat_age < 50 else 0.26  # Adjusts for menopause in women
+
+    # Familial Hypercholesterolemia adjustments
+    if family_history == 'HeFH':
+        # LDL levels for Heterozygous FH (HeFH)
+        base_ldl = random.uniform(4.9, 8.0)
+    elif family_history == 'HoFH':
+        # LDL levels for Homozygous FH (HoFH)
+        base_ldl = random.uniform(13.0, 20.0)
+
+    # Calculate total LDL in mmol/L
+    total_ldl = base_ldl + diet_adjustment + obesity_adjustment + smoking_adjustment + alcohol_adjustment + diabetes_adjustment + age_gender_adjustment
+
+    return round(total_ldl, 2)
+
+def calculate_target_ldl(qrisk3):
+    if qrisk3 < 10:
+        target_ldl = 2.4  # Target LDL for low risk
+        risiko = "niedriges Risiko"
+    elif 10 <= qrisk3 <= 20:
+        target_ldl = 1.8  # Target LDL for moderate risk
+        risiko = "hohes Risiko"
+    else:
+        target_ldl = 1.4  # Target LDL for high risk
+        risiko = "sehr hohes Risiko"
+    return target_ldl, risiko
 
 def generate_random_date_within_1_3_years(): #random date generation for last complication screening
     """
@@ -492,13 +642,14 @@ def generate_details_typ1(pat_age, primary_diagnosis):
     if keto_output:
         details_dict["akutkomplikationen"].append(keto_output)
     
-    cvrisk_factors = generate_cvrisk_factors(pat_age)
+    cvrisk_factors, bmi = generate_cvrisk_factors(pat_age)
     details_dict["cvrisk_factors"] = cvrisk_factors
+    
 
     spätkomplikationen = generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors)
     details_dict["spätkomplikationen"] = spätkomplikationen
 
-    return details_dict, current_hba1c
+    return details_dict, current_hba1c, cvrisk_factors, bmi
 
 def assemble_details(details_dict):
     assembled_details = []
@@ -543,6 +694,51 @@ def generate_details_based_on_diagnosis(diagnosis, pat_age):
     else:
         return {}
 
+def generate_weitere_diagnosen():
+    weitere_diagnosen = []
+    
+    b_AF = random.randint(0, 15) # Atrial fibrillation status
+    b_corticosteroids = random.randint(0, 15)  # Corticosteroids usage
+    b_impotence2 = random.randint(0, 12)
+    b_ra = random.randint(0, 80)
+    b_sle = random.randint(0, 150)
+    b_atypicalantipsy = random.randint(0, 15)
+    b_migraine = random.randint(0, 15)
+    # Add 'Vorhofflimmern' to weitere_diagnosen if atrial fibrillation is true
+    if b_AF == 1:
+        weitere_diagnosen.append("Vorhofflimmern")
+    if b_corticosteroids == 1:
+        weitere_diagnosen.append("Dauersteroidtherapie")
+    if b_impotence2 == 1:
+        weitere_diagnosen.append("Erektile Dysfunktion")      
+    if b_ra == 1:
+        weitere_diagnosen.append("Rheumatoide Arthritis")       
+    if b_sle == 1:
+        weitere_diagnosen.append("Systemischer Lupus Erythematodes")    
+    if b_atypicalantipsy == 1:
+        weitere_diagnosen.append("Psychiatrische Erkrankung (unter atypischen Antipsychotika)")    
+    if b_migraine == 1:
+        weitere_diagnosen.append("Migräne")
+    # Here, you can add more conditions to include other diagnoses as needed
+
+    return weitere_diagnosen
+
+def assemble_weitere_diagnosen(weitere_diagnosen):
+    """
+    Assembles a list of additional diagnoses into a formatted string.
+
+    Args:
+        weitere_diagnosen (list): A list of additional diagnoses.
+
+    Returns:
+        str: A formatted string of additional diagnoses.
+    """
+    if weitere_diagnosen:
+        formatted_diagnoses = "\n".join([f"- {diagnose}" for diagnose in weitere_diagnosen])
+        return f"\n\nWeitere Diagnosen\n{formatted_diagnoses}"
+    else:
+        return ""
+    
 def determine_hba1c_score(current_hba1c_value, previous_hba1c_value, hba1c_improvement_category):
     # Initial values
     hba1c_score = 0
@@ -703,7 +899,7 @@ def main():
     ) = load_patient_data()
 
     # Generate the patient header
-    header, pat_age = generate_patient_header(
+    header, pat_age, pat_gender = generate_patient_header(
         pat_first_names,
         pat_last_names,
         pat_streets,
@@ -721,12 +917,59 @@ def main():
     primary_diagnosis = select_primary_diagnosis(possible_primary_diagnoses)
 
     # Generate details based on the selected primary diagnosis
-    diagnosis_details_dict, _ = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
-
+    diagnosis_details_dict, _, cvrisk_factors, bmi = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
 
     # Assemble the diagnosis details
     assembled_diagnosis_details = assemble_details(diagnosis_details_dict)
+    weitere_diagnosen = generate_weitere_diagnosen()    
+    assembled_weitere_diagnosen = assemble_weitere_diagnosen(weitere_diagnosen)
+    # Determine diabetes and obesity status
+    has_diabetes = "Diabetes" in primary_diagnosis # Adjust this based on your diagnosis logic
+    has_obesity = "Adipositas" in cvrisk_factors  # Adjust this based on your risk factor logic
+    has_smoking_history = "Nikotinabusus" in cvrisk_factors or "Nikotin" in cvrisk_factors  # Adjust based on smoking history
+    is_smoker = "St. n. Nikotinabusus" not in cvrisk_factors # Adjust based on if current smoker
+    systolic, diastolic, bp_key = generate_blood_pressure(pat_age, pat_gender, has_diabetes, has_obesity, has_smoking_history)
 
+
+     
+    # Include a sentence about high blood pressure if applicable
+    if bp_key == "high":
+        blood_pressure = f"Der Blutdruck ({systolic}/{diastolic} mmHg) ist deutlich erhöht."
+    else:
+        blood_pressure = f"Der heutige Blutdruck liegt bei {systolic}/{diastolic} mmHg."
+
+    # Determine familial hypercholesterolemia status
+    fh_status = def_familial_hypercholesterolemia()
+    # Generate LDL cholesterol
+    ldl_cholesterol = generate_ldl_cholesterol(pat_age, pat_gender, has_obesity, is_smoker, has_diabetes, fh_status)
+
+    # LDL Cholesterol Text Output
+    if fh_status == 'HoFH':
+        ldl_text = f"Der LDL-Cholesterinspiegel ist deutlich zu hoch ({ldl_cholesterol} mmol/L), womit eine homozygote familiäre Hypercholesterinämie überprüft werden sollte "
+    elif fh_status == 'HeFH':
+        ldl_text = f"Der LDL-Cholesterinspiegel ist sehr hoch ({ldl_cholesterol} mmol/L) und lässt differentialdiagnostisch an eine heterozygote familiäre Hypercholesterinämie denken "
+    elif ldl_cholesterol > 4.9:
+        ldl_text = f"Der LDL-Cholesterinspiegel ist erhöht ({ldl_cholesterol} mmol/L) "
+    else:
+        ldl_text = f"Der LDL-Cholesterinspiegel liegt bei {ldl_cholesterol} mmol/L "
+
+    # Call generate_qrisk3_score male
+    if pat_gender == "m":
+        qrisk3_score = generate_qrisk3_score_m(
+            pat_age, weitere_diagnosen, primary_diagnosis, bmi, systolic, 
+            ldl_cholesterol, is_smoker, has_smoking_history, cvrisk_factors
+        )  
+        # Call generate_qrisk3_score female
+    if pat_gender == "w":
+        qrisk3_score = generate_qrisk3_score_w(
+            pat_age, weitere_diagnosen, primary_diagnosis, bmi, systolic, 
+            ldl_cholesterol, is_smoker, has_smoking_history, cvrisk_factors
+        )  
+    
+    target_ldl, risiko = calculate_target_ldl(qrisk3_score)
+    assembled_diagnosis_details = assembled_diagnosis_details.replace("Dyslipidämie", f"Dyslipidämie (Ziel-LDL < {target_ldl} mmol/l)")
+    target_ldl_text = (f"bei einem Ziel-LDL von < {target_ldl}mmol/l ")
+    qrisk3_text = (f"(QRISK3-Score: {qrisk3_score:.0f}%, {risiko}). ")
     # Call previous HbA1c date for entrance sentence "Verlaufskontrolle nach x Wochen/Monaten"
     current_hba1c_value = diagnosis_details_dict['hba1c']['current']['value']
     previous_hba1c_value = diagnosis_details_dict['hba1c']['previous']['value']
@@ -742,9 +985,9 @@ def main():
         improvement_wordings = [
         "deutlich verbessert", "stark verbessert", "signifikant verbessert", 
         "relevant verbessert", "merklich verbessert", "verbessert", 
-        "leicht verbessert", "etwas verbessert", "diskret verbessert"
+        "leicht verbessert", "etwas verbessert", "diskret verbessert", "etwas optimiert"
         ]
-        bereits_dict = ["bereits ", "jedoch bereits ", "bereits schon "]
+        bereits_dict = ["bereits ", "jedoch bereits ", "bereits schon ", "schon bereits "]
         bereits = random.choice(bereits_dict)        
         # Check and prepend "bereits" to the improvement wording in the sentence
         for wording in improvement_wordings:
@@ -761,10 +1004,14 @@ def main():
 
     final_output = (
     f"{header}\n"
-    f"{assembled_diagnosis_details}\n"
+    f"{assembled_diagnosis_details}"
+    f"{assembled_weitere_diagnosen}\n"
     f"{entrance_sentence} "
     f"{hba1c_sentence} "
-    f"{sentence2}"
+    f"{sentence2}\n"
+    f"{ldl_text}{target_ldl_text}"
+    f"{qrisk3_text}"
+    f"{blood_pressure} "
     )
 
     print(final_output)

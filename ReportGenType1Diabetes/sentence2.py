@@ -297,7 +297,7 @@ def generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_
         },
         "verbessert": {
             "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Dank", "Mit Hilfe", "Durch"],
-            "improvement_wordings": ["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert"],
+            "improvement_wordings": ["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert", "etwas optimiert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -309,7 +309,7 @@ def generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_
             "entrance_prepositions": ["Unter", "Bei", "Mit"],
             "improvement_wordings": ["stabil gehalten", "stabilisiert"],
             "entrance_adverbs": ["gewissenhaft", "konsequent"],
-            "helper_nouns": ["Optimierungsversuchen", "Umsetzung", "Einhaltung", "Verbesserung"],
+            "helper_nouns": ["Optimierungsversuchen", "Umsetzung", "Einhaltung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],
             "glucose_control": ["Blutzuckereinstellung", "Einstellung", "Glukosestoffwechsel"],
@@ -379,9 +379,12 @@ def determine_noun_attributes(local_main_noun, local_helper_noun):
     
     for token in doc_helper_noun:
         if token.pos_ == "NOUN":
-            helper_noun_gender = token.morph.get("Gender")[0]
-            #helper_noun_number = "Plur" if token.morph.get("Number")[0] == "Plur" else "Sing" 
+            gender_list = token.morph.get("Gender")
+            if gender_list:  # Check if the list is not empty
+                helper_noun_gender = gender_list[0]
+            # Add similar checks for other morphological attributes as needed
             break
+
 
     for token in doc_main_noun:
         if token.pos_ == "NOUN":
