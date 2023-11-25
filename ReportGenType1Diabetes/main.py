@@ -308,8 +308,9 @@ def generate_cvrisk_factors(pat_age):
     
     # Dyslipidämie with LDL target
     if random.choice([True, False]):
-        cvrisk_factors_details.append(f"Dyslipidämie")
+        cvrisk_factors_details.append("Dyslipidämie")
     
+
     # Adipositas with BMI and date
     adipositas_grades = ["Grad I", "Grad II", "Grad III"]
     current_month = datetime.datetime.now().month
@@ -391,6 +392,49 @@ def generate_qrisk3_score_w(pat_age, weitere_diagnosen, primary_diagnosis, bmi, 
     qrisk3_score_w = cvd_female_raw(pat_age, b_AF, b_atypicalantipsy, b_corticosteroids, b_migraine, b_ra, b_renal, b_semi, b_sle, b_treatedhyp, b_type1, b_type2, bmi, ethrisk, fh_cvd, rati, systolic, sbps5, smoke_cat, surv, town)
     
     return qrisk3_score_w
+
+def generate_agla_category(pat_age, prim_diagnosis_year, has_diabetes, hba1c_score, complications_score, spätkomplikationen, fh_status):
+    # Constants for AGLA categories
+    AGLA_CATEGORIES = {
+        "good_control_less_10_years_no_endorganschaden_no_main_risk": "AGLA-Score: moderates Risiko",
+        "good_control_less_10_years_no_endorganschaden_one_main_risk": "AGLA-Score: hohes Risiko",
+        "good_control_less_10_years_no_endorganschaden_multiple_main_risks": "AGLA-Score: sehr hohes Risiko",
+        "not_optimal_or_longer_10_years_no_main_risk": "AGLA-Score: hohes Risiko",
+        "not_optimal_or_longer_10_years_with_main_risk": "AGLA-Score: sehr hohes Risiko",
+        "with_ASCVD_or_severe_endorganschaden": "AGLA-Score: sehr hohes Risiko"
+    }
+
+    current_year = datetime.datetime.now().year
+    years_since_diagnosis = current_year - prim_diagnosis_year
+
+    if pat_age > 40 and has_diabetes:
+        has_endorganschaden = complications_score > 3
+        has_ASCVD = "Koronare Herzkrankheit" in spätkomplikationen
+
+        # Check for presence of ASCVD or severe end-organ damage
+        if has_endorganschaden or has_ASCVD:
+            return AGLA_CATEGORIES["with_ASCVD_or_severe_endorganschaden"]
+
+        # Determine if well-controlled diabetes for less than 10 years
+        if years_since_diagnosis < 10 and hba1c_score in [1, 2]:
+            if fh_status == 'None':
+                return AGLA_CATEGORIES["good_control_less_10_years_no_endorganschaden_no_main_risk"]
+            elif fh_status in ['HeFH', 'HoFH']:
+                return AGLA_CATEGORIES["good_control_less_10_years_no_endorganschaden_one_main_risk"]
+            else:
+                return AGLA_CATEGORIES["good_control_less_10_years_no_endorganschaden_multiple_main_risks"]
+
+        # Determine if not optimal control or longer duration
+        elif years_since_diagnosis >= 10 or hba1c_score > 2:
+            if fh_status == 'None':
+                return AGLA_CATEGORIES["not_optimal_or_longer_10_years_no_main_risk"]
+            else:
+                return AGLA_CATEGORIES["not_optimal_or_longer_10_years_with_main_risk"]
+
+    return ""
+
+
+    
 def generate_blood_pressure(pat_age, pat_gender, has_diabetes, has_obesity, has_smoking_history):
     """
     Generates a realistic blood pressure reading based on patient's age, gender, diabetes, and obesity status.
@@ -470,7 +514,7 @@ def generate_ldl_cholesterol(pat_age, pat_gender, has_obesity, is_smoker, has_di
         base_ldl = random.uniform(13.0, 20.0)
 
     # Calculate total LDL in mmol/L
-    total_ldl = base_ldl + diet_adjustment + obesity_adjustment + smoking_adjustment + alcohol_adjustment + diabetes_adjustment + age_gender_adjustment
+    total_ldl = round(base_ldl + diet_adjustment + obesity_adjustment + smoking_adjustment + alcohol_adjustment + diabetes_adjustment + age_gender_adjustment, 1)
 
     return round(total_ldl, 2)
 
@@ -511,13 +555,14 @@ def generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors_details)
     """
     complications_details = []
     cv_risk_factors = cvrisk_factors_details.split(", ")
-
+    complications_score = 0
     # Check for dyslipidemia and add KHK if criteria are met
-    has_dyslipidemia = "Dyslipidemia" in cv_risk_factors
-    if len(cv_risk_factors) >= 2 and pat_age >= 50:
+    has_dyslipidemia = "Dyslipidämie" in cv_risk_factors
+    if len(cv_risk_factors) >= 2 and pat_age >= 55:
         if not has_dyslipidemia:
-            cv_risk_factors.append("Dyslipidemia")
+            cv_risk_factors.append("Dyslipidämie")
         complications_details.append("Koronare Herzkrankheit")
+        complications_score = complications_score + 1
 
     # Update the cvrisk_factors_details string
     cvrisk_factors_details = ", ".join(cv_risk_factors)
@@ -529,22 +574,34 @@ def generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors_details)
     ckd_stages = ["G1A1", "G2A1", "G3aA1", "G3bA1", "G4A2", "G5A3"]
     if current_hba1c > 7.0 and random.choice([True, False]):  # Higher chance with poor glycemic control
         stage = random.choice(ckd_stages)
+        if "G2" in stage:
+                complications_score = complications_score + 1
+        elif "G3a" in stage:
+                complications_score = complications_score + 2
+        elif "G3b" in stage:
+                complications_score = complications_score + 3
+        elif "G4" in stage:
+            complications_score = complications_score + 4 
+        elif "G5" in stage:
+            complications_score = complications_score + 5              
         complications_details.append(f"Nephropathie (CKD-Stadium {stage} zuletzt {last_screening_date_nephro})")
     else:
         complications_details.append(f"Keine Nephropathie (zuletzt {last_screening_date_nephro})")
 
     if current_hba1c > 7.0 and random.choice([True, False]):  # Higher chance with poor glycemic control
         complications_details.append(f"Retinopathie (zuletzt {last_screening_date_retino})")
+        complications_score = complications_score + 3
     else:
         complications_details.append(f"Keine Retinopathie (zuletzt {last_screening_date_retino})")
     
     # Periphere Polyneuropathie with foot examination date
     if current_hba1c > 7.0 and random.choice([True, False]):  # Higher chance with poor glycemic control
         complications_details.append(f"Periphere Polyneuropathie (Fussuntersuchung zuletzt {last_screening_date_füsse})")
+        complications_score = complications_score + 3
     else:
         complications_details.append(f"Keine periphere Polyneuropathie (Fussuntersuchung zuletzt {last_screening_date_füsse})")
 
-    return "\n- ".join(complications_details)
+    return complications_score, "\n- ".join(complications_details)
 
 def generate_previous_hba1c_date(prev_hba1c, current_month, current_year):
 
@@ -646,10 +703,10 @@ def generate_details_typ1(pat_age, primary_diagnosis):
     details_dict["cvrisk_factors"] = cvrisk_factors
     
 
-    spätkomplikationen = generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors)
+    complications_score, spätkomplikationen = generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors)
     details_dict["spätkomplikationen"] = spätkomplikationen
 
-    return details_dict, current_hba1c, cvrisk_factors, bmi
+    return details_dict, current_hba1c, cvrisk_factors, bmi, complications_score, spätkomplikationen, prim_diagnosis_year
 
 def assemble_details(details_dict):
     assembled_details = []
@@ -675,7 +732,6 @@ def assemble_details(details_dict):
         assembled_details.append("Weitere kardiovaskuläre Risikofaktoren\n- " + details_dict["cvrisk_factors"])
     if details_dict["spätkomplikationen"]:
         assembled_details.append("Spätkomplikationen\n- " + details_dict["spätkomplikationen"])
-
     return "\n".join(assembled_details)
 
 def select_primary_diagnosis(possible_primary_diagnoses):
@@ -689,10 +745,11 @@ def generate_details_based_on_diagnosis(diagnosis, pat_age):
     Generate details based on the selected primary diagnosis.
     """
     if diagnosis == "Diabetes Mellitus Typ 1":
-        return generate_details_typ1(pat_age, diagnosis)
-    # Here you can add other diagnoses and their respective detail generation in the future.
+        details_dict, current_hba1c, cvrisk_factors, bmi, complications_score, spätkomplikationen, prim_diagnosis_year = generate_details_typ1(pat_age, diagnosis)
+        return details_dict, current_hba1c, cvrisk_factors, bmi, complications_score, spätkomplikationen, prim_diagnosis_year
     else:
-        return {}
+        return {}, None, None, None, None, None
+
 
 def generate_weitere_diagnosen():
     weitere_diagnosen = []
@@ -824,8 +881,6 @@ def create_beurteilung(previous_hba1c_value, current_hba1c_value):
         text=True,
         check=False
     )
-    print("Standard Output:", spacy_output.stdout)
-    print("Error Output:", spacy_output.stderr)
     sentence2 = spacy_output.stdout.strip()
 
     return hba1c_improvement_category, sentence2
@@ -917,10 +972,10 @@ def main():
     primary_diagnosis = select_primary_diagnosis(possible_primary_diagnoses)
 
     # Generate details based on the selected primary diagnosis
-    diagnosis_details_dict, _, cvrisk_factors, bmi = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
-
+    diagnosis_details_dict, current_hba1c, cvrisk_factors, bmi, complications_score, spätkomplikationen, prim_diagnosis_year = generate_details_based_on_diagnosis(primary_diagnosis, pat_age)
     # Assemble the diagnosis details
     assembled_diagnosis_details = assemble_details(diagnosis_details_dict)
+    
     weitere_diagnosen = generate_weitere_diagnosen()    
     assembled_weitere_diagnosen = assemble_weitere_diagnosen(weitere_diagnosen)
     # Determine diabetes and obesity status
@@ -930,8 +985,6 @@ def main():
     is_smoker = "St. n. Nikotinabusus" not in cvrisk_factors # Adjust based on if current smoker
     systolic, diastolic, bp_key = generate_blood_pressure(pat_age, pat_gender, has_diabetes, has_obesity, has_smoking_history)
 
-
-     
     # Include a sentence about high blood pressure if applicable
     if bp_key == "high":
         blood_pressure = f"Der Blutdruck ({systolic}/{diastolic} mmHg) ist deutlich erhöht."
@@ -966,10 +1019,27 @@ def main():
             ldl_cholesterol, is_smoker, has_smoking_history, cvrisk_factors
         )  
     
+
     target_ldl, risiko = calculate_target_ldl(qrisk3_score)
-    assembled_diagnosis_details = assembled_diagnosis_details.replace("Dyslipidämie", f"Dyslipidämie (Ziel-LDL < {target_ldl} mmol/l)")
-    target_ldl_text = (f"bei einem Ziel-LDL von < {target_ldl}mmol/l ")
-    qrisk3_text = (f"(QRISK3-Score: {qrisk3_score:.0f}%, {risiko}). ")
+    # Assuming cvrisk_factors is a string containing the risk factors
+    if "Dyslipidämie" in cvrisk_factors:
+        # Replace existing 'Dyslipidämie' with updated info
+        cvrisk_factors = cvrisk_factors.replace("Dyslipidämie", f"Dyslipidämie (Ziel-LDL < {target_ldl} mmol/l)")
+    else:
+        # Append new 'Dyslipidämie' info if it doesn't exist
+        if cvrisk_factors:  # if cvrisk_factors is not empty
+            cvrisk_factors += f", Dyslipidämie (Ziel-LDL < {target_ldl} mmol/l)"
+        else:
+            cvrisk_factors = f"Dyslipidämie (Ziel-LDL < {target_ldl} mmol/l)"
+
+    # Update the details_dict with the modified cvrisk_factors
+    diagnosis_details_dict["cvrisk_factors"] = cvrisk_factors
+
+    # Now, reassemble the details with the updated cvrisk_factors
+    assembled_diagnosis_details = assemble_details(diagnosis_details_dict)
+
+    target_ldl_text = (f"Ziel-LDL < {target_ldl} mmol/l")
+    qrisk3_text = (f"QRISK3-Score: {qrisk3_score:.0f}%, {risiko}")
     # Call previous HbA1c date for entrance sentence "Verlaufskontrolle nach x Wochen/Monaten"
     current_hba1c_value = diagnosis_details_dict['hba1c']['current']['value']
     previous_hba1c_value = diagnosis_details_dict['hba1c']['previous']['value']
@@ -978,17 +1048,19 @@ def main():
     # Call determine_hba1c_score to calculate the score and wording
     hba1c_improvement_category, sentence2 = create_beurteilung(previous_hba1c_value, current_hba1c_value)
     hba1c_score, hba1c_wording = determine_hba1c_score(current_hba1c_value, previous_hba1c_value, hba1c_improvement_category)
-    
+    agla_score = generate_agla_category(pat_age, prim_diagnosis_year, has_diabetes, hba1c_score, complications_score, spätkomplikationen, fh_status)
+    agla_text = agla_score
     # Check the hba1c_wording
     if hba1c_wording == "weiterhin optimierungsfähig":
         # Define the list of possible improvement wordings
+        bereits_dict = ["bereits ", "jedoch bereits ", "bereits schon ", "schon ", "allerdings schon ", "allerdings "]
+        bereits = random.choice(bereits_dict)          
         improvement_wordings = [
         "deutlich verbessert", "stark verbessert", "signifikant verbessert", 
         "relevant verbessert", "merklich verbessert", "verbessert", 
-        "leicht verbessert", "etwas verbessert", "diskret verbessert", "etwas optimiert"
+        "etwas verbessert", "diskret verbessert", "etwas optimiert"
         ]
-        bereits_dict = ["bereits ", "jedoch bereits ", "bereits schon ", "schon bereits "]
-        bereits = random.choice(bereits_dict)        
+      
         # Check and prepend "bereits" to the improvement wording in the sentence
         for wording in improvement_wordings:
             if wording in sentence2:
@@ -999,6 +1071,10 @@ def main():
     ist_dict = ["ist", "zeigt sich"]
     ist = random.choice(ist_dict)
     hba1c_sentence = f"Die Blutzuckereinstellung {ist} {hba1c_wording}."
+    if agla_score != "":
+        cv_risk_bracket = f"({qrisk3_text}; {agla_text}, {target_ldl_text}). "
+    else:
+        cv_risk_bracket = f"({qrisk3_text}, {target_ldl_text}). "
 
     entrance_sentence = generate_verlaufskontrolle_entrance(previous_hba1c_date)
 
@@ -1009,8 +1085,8 @@ def main():
     f"{entrance_sentence} "
     f"{hba1c_sentence} "
     f"{sentence2}\n"
-    f"{ldl_text}{target_ldl_text}"
-    f"{qrisk3_text}"
+    f"{ldl_text}"
+    f"{cv_risk_bracket}"
     f"{blood_pressure} "
     )
 

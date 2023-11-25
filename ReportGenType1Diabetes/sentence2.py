@@ -54,7 +54,7 @@ def apply_german_grammar(local_sentence, entrance_preposition, main_noun_gender,
     # Define entrance cases for adverbs
     adverb_cases = {
         "Dativ": {
-            "prepositions": ["Nach", "Unter", "Bei", "Mit", "Dank", "Wegen", "Mit Hilfe"],
+            "prepositions": ["Aufgrund", "Nach", "Unter", "Bei", "Mit", "Dank", "Wegen", "Mit Hilfe"],
             "suffixes": {"Fem": "er", "Masc": "em", "Neut": "em", "Plur": "en"},
         },
         "Genitiv": {
@@ -171,7 +171,10 @@ def is_valid_combination(local_time_prep, local_main_noun):
         },
         "Kohlenhydratzufuhr": {
             "time_prepositions": ["nach"]
-        }
+        },
+        "Korrekturfaktor": {
+            "time_prepositions": ["nach"]
+        }        
     }
 
     # Check for invalid combinations
@@ -297,7 +300,7 @@ def generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_
         },
         "verbessert": {
             "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Dank", "Mit Hilfe", "Durch"],
-            "improvement_wordings": ["verbessert", "leicht verbessert", "etwas verbessert", "diskret verbessert", "etwas optimiert"],
+            "improvement_wordings": ["verbessert", "etwas verbessert", "diskret verbessert", "etwas optimiert"],
             "entrance_adverbs": ["dezidiert", "gezielt", "konsequent"],
             "helper_nouns": ["Anpassung", "Optimierung", "Reduktion", "Steigerung", "Verbesserung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
@@ -327,8 +330,8 @@ def generate_sentence(hba1c_improvement_category, previous_hba1c_value, current_
         },
         "deutlich verschlechtert": {
             "entrance_prepositions": ["Nach", "Unter", "Bei", "Mit", "Wegen", "Durch", "Aufgrund"],
-            "improvement_wordings": ["deutlich verschlechtert", "sehr verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
-            "entrance_adverbs": ["persistierend", "zu stark", "imponierend", "zu gering"],
+            "improvement_wordings": ["deutlich verschlechtert", "verschlechtert", "signifikant verschlechtert", "relevant verschlechtert", "merklich verschlechtert"],
+            "entrance_adverbs": ["persistierend", "etwas zu optimistisch", "imponierend", "zu gering", "zu zögerlich"],
             "helper_nouns": ["Reduktion", "Steigerung"],
             "main_nouns": ["Bolus", "Bolus-Ess-Abstand", "Kohlenhydratmenge", "Kohlenhydratzufuhr", "Kohlenhydratfaktor", "Kohlenhydratfaktoren", "Korrekturfaktor", "Mahlzeiten-Bolus", "Therapie-Adhärenz"],
             "main_meals": ["Frühstück", "Mittagessen", "Abendessen"],

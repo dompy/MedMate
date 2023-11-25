@@ -1,8 +1,9 @@
+'''
+Female cardiovascular risk calculation on UK-based population, internalises lots of parameters
+and therefore probably most applicable for type 1 diabetes
+translated from C to python, slightly adjusted from https://qrisk.org/src.php
+'''
 import math
-# Define test values for all parameters
-
-# female qrisk3 calculation
-
 def cvd_female_raw(age, b_AF, b_atypicalantipsy, b_corticosteroids, b_migraine, b_ra, b_renal, b_semi, b_sle, b_treatedhyp, b_type1, b_type2, bmi, ethrisk, fh_cvd, rati, sbp, sbps5, smoke_cat, surv, town):
     survivor = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.988876402378082, 0, 0, 0, 0, 0]
     Iethrisk = [0, 0, 0.2804031433299542500000000, 0.5629899414207539800000000, 0.2959000085111651600000000, 0.0727853798779825450000000, -0.1707213550885731700000000, -0.3937104331487497100000000, -0.3263249528353027200000000, -0.1712705688324178400000000]
@@ -88,8 +89,8 @@ def cvd_female_raw(age, b_AF, b_atypicalantipsy, b_corticosteroids, b_migraine, 
     a += age_2 * town * -0.031593414674962329
 
     # Calculate the score itself
-    scorew = 100.0 * (1 - (survivor[surv] ** math.exp(a)))
-    return scorew
+    score_w = 100.0 * (1 - (survivor[surv] ** math.exp(a)))
+    return score_w
 
 if __name__ == "__main__":
     score = cvd_female_raw(age, b_AF, b_atypicalantipsy, b_corticosteroids, b_migraine, b_ra, b_renal, b_semi, b_sle, b_treatedhyp, b_type1, b_type2, bmi, ethrisk, fh_cvd, rati, sbp, sbps5, smoke_cat, surv, town)
