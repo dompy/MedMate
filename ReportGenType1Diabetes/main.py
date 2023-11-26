@@ -1,14 +1,10 @@
 import random
-import sys
 import subprocess
-import json
-import pint
-import datetime
-from datetime import datetime as dt, timedelta
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from qrisk3male import cvd_male_raw
 from qrisk3female import cvd_female_raw
-ureg = pint.UnitRegistry()
+
 def load_patient_data():
 # Provided patient data lists
     first_names = {
@@ -77,7 +73,7 @@ def generate_pat_birth_date():
     """
     Generate a random birth date in dd.mm.yyyy format.
     """
-    current_year = datetime.datetime.now().year
+    current_year = datetime.now().year
     
     # Define a reasonable age range for patients
     pat_min_age = 17
@@ -115,7 +111,7 @@ def generate_patient_header(first_names, last_names, streets, street_numbers, po
     pat_phone_number = generate_phone_number(phone_numbers)
     
     clinic_name = "\033[1;35mFantasie Kliniken Bern\033[0m"
-    consultation_date = (datetime.datetime.now() - timedelta(days=random.randint(0, (datetime.datetime.now() - datetime.datetime.strptime(pat_birth_date, "%d.%m.%Y")).days))).strftime("%d.%m.%Y")
+    consultation_date = (datetime.now() - timedelta(days=random.randint(0, (datetime.now() - datetime.strptime(pat_birth_date, "%d.%m.%Y")).days))).strftime("%d.%m.%Y")
     
     report = f"\n{clinic_name}\n"
     report += f"\nFiktive Sprechstunde für Diabetologie vom {consultation_date}\n\n"
@@ -151,9 +147,9 @@ def generate_akutkomplikationen(prim_diagnosis_year):
             random.shuffle(hypoglykemia_grades)
             hypoglykemia_grade = hypoglykemia_grades[_ % len(hypoglykemia_grades)]
 
-            current_year = datetime.datetime.now().year
-            current_month = datetime.datetime.now().month
-            current_day = datetime.datetime.now().day
+            current_year = datetime.now().year
+            current_month = datetime.now().month
+            current_day = datetime.now().day
             
             hypoglykemia_year = random.randint(prim_diagnosis_year, current_year) 
             if hypoglykemia_year == current_year:
@@ -172,7 +168,7 @@ def generate_akutkomplikationen(prim_diagnosis_year):
             else:
                 hypoglykemia_day = random.randint(1, 31)
 
-            hypoglykemia_date = datetime.datetime(hypoglykemia_year, hypoglykemia_month, hypoglykemia_day)
+            hypoglykemia_date = datetime(hypoglykemia_year, hypoglykemia_month, hypoglykemia_day)
             events_dates.append((hypoglykemia_date, hypoglykemia_grade))
             
         # Sort the dates in descending order
@@ -180,7 +176,7 @@ def generate_akutkomplikationen(prim_diagnosis_year):
 
         for idx, (date, grade) in enumerate(events_dates):
             # Determine if hypoglykemia_date is within the last 8 weeks
-            eight_weeks_ago = datetime.datetime.now() - timedelta(weeks=8)
+            eight_weeks_ago = datetime.now() - timedelta(weeks=8)
             
             if date > eight_weeks_ago:
                 hypoglykemia_display_date = date.strftime('%d.%m.%Y')
@@ -207,9 +203,9 @@ def generate_akutkomplikationen(prim_diagnosis_year):
         events_dates = []  # to store the dates for sorting later
 
         for _ in range(num_events):
-            current_year = datetime.datetime.now().year
-            current_month = datetime.datetime.now().month
-            current_day = datetime.datetime.now().day
+            current_year = datetime.now().year
+            current_month = datetime.now().month
+            current_day = datetime.now().day
 
             ketoacidosis_year = random.randint(prim_diagnosis_year, current_year)
             if ketoacidosis_year == current_year:
@@ -228,7 +224,7 @@ def generate_akutkomplikationen(prim_diagnosis_year):
             else:
                 ketoacidosis_day = random.randint(1, 31)
 
-            ketoacidosis_date = datetime.datetime(ketoacidosis_year, ketoacidosis_month, ketoacidosis_day)
+            ketoacidosis_date = datetime(ketoacidosis_year, ketoacidosis_month, ketoacidosis_day)
             events_dates.append(ketoacidosis_date)
             
         # Sort the dates in descending order
@@ -236,7 +232,7 @@ def generate_akutkomplikationen(prim_diagnosis_year):
 
         for idx, date in enumerate(events_dates):
             # Determine if ketoacidosis_date is within the last 8 weeks
-            eight_weeks_ago = datetime.datetime.now() - timedelta(weeks=8)
+            eight_weeks_ago = datetime.now() - timedelta(weeks=8)
             
             if date > eight_weeks_ago:
                 ketoacidosis_display_date = date.strftime('%d.%m.%Y')
@@ -260,7 +256,7 @@ def generate_smoking_status(pat_age):
     """
     Generate smoking history based on patient's age, with updated formatting.
     """
-    current_year = datetime.datetime.now().year
+    current_year = datetime.now().year
     
     # Assume a person can start smoking from the age of 15
     max_smoking_years = pat_age - 15
@@ -313,8 +309,8 @@ def generate_cvrisk_factors(pat_age):
 
     # Adipositas with BMI and date
     adipositas_grades = ["Grad I", "Grad II", "Grad III"]
-    current_month = datetime.datetime.now().month
-    current_year = datetime.datetime.now().year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
     bmi = round(random.uniform(20, 24), 1)  # Random BMI value
     if random.choice([True, False]):
         grade = random.choice(adipositas_grades)
@@ -404,7 +400,7 @@ def generate_agla_category(pat_age, prim_diagnosis_year, has_diabetes, hba1c_sco
         "with_ASCVD_or_severe_endorganschaden": "AGLA-Score: sehr hohes Risiko"
     }
 
-    current_year = datetime.datetime.now().year
+    current_year = datetime.now().year
     years_since_diagnosis = current_year - prim_diagnosis_year
 
     if pat_age > 40 and has_diabetes:
@@ -534,8 +530,8 @@ def generate_random_date_within_1_3_years(): #random date generation for last co
     """
     Generate a random date within the last 1-3 years in the format MM/YYYY.
     """
-    current_month = datetime.datetime.now().month
-    current_year = datetime.datetime.now().year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
 
     # Randomly select a month within the past 36 months
     months_ago = random.randint(1, 36)
@@ -627,7 +623,7 @@ def generate_previous_hba1c_date(prev_hba1c, current_month, current_year):
 
     # Calculate the date for the previous HbA1c based on the interval and unit
     if unit == "Wochen":
-        prev_hba1c_date = datetime.datetime(current_year, current_month, 1) - timedelta(weeks=interval)
+        prev_hba1c_date = datetime(current_year, current_month, 1) - timedelta(weeks=interval)
     else:
         prev_hba1c_date = dt(current_year, current_month, 1) - relativedelta(months=interval)
 
@@ -667,8 +663,8 @@ def generate_details_typ1(pat_age, primary_diagnosis):
     # AGP-Details of HCL-System 
     
     # HbA1c values
-    current_month = datetime.datetime.now().month
-    current_year = datetime.datetime.now().year
+    current_month = datetime.now().month
+    current_year = datetime.now().year
     current_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
     previous_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
     previous_hba1c_date = generate_previous_hba1c_date(previous_hba1c, current_month, current_year)
@@ -905,8 +901,8 @@ def generate_verlaufskontrolle_entrance(previous_hba1c_date):
         indicating the interval since the last HbA1c test in weeks or months.
     """
     # Convert string date to datetime object assuming format '%m/%Y'
-    previous_date = dt.strptime(previous_hba1c_date, '%m/%Y')
-    current_date = datetime.datetime.now()
+    previous_date = datetime.strptime(previous_hba1c_date, '%m/%Y')
+    current_date = datetime.now()
 
     # Calculate the difference in weeks
     difference = current_date - previous_date
