@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from gen_cv_risk_factors import generate_cvrisk_factors
 from gen_akutkomplikationen import generate_hypo_awareness, generate_ketoacidosis
-from gen_spätkomplikationen import generate_spätkomplikationen
+from gen_spaetkomplikationen import generate_spätkomplikationen
 from helper_functions import generate_short_random_date_within_1_3_years, generate_long_random_date_within_1_3_years
 
 def generate_common_details():
