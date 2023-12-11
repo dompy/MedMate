@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import json
 
@@ -17,17 +18,25 @@ def fetch_patient_info(patient_id):
     finally:
         conn.close()
 
-def fetch_latest_consultation_id(patient_id):
+def fetch_latest_consultation(patient_id):
     conn = sqlite3.connect('clinic.db')
     cursor = conn.cursor()
     try:
-        # Query to get the latest consultation ID for the given patient
-        cursor.execute("SELECT MAX(consultation_id) FROM consultations WHERE patient_id = ?", (patient_id,))
-        latest_consultation_id = cursor.fetchone()[0]
-        return latest_consultation_id
+        # Query to get the latest consultation ID and date for the given patient
+        cursor.execute("""
+            SELECT consultation_id, consultation_date 
+            FROM consultations 
+            WHERE patient_id = ? 
+            ORDER BY consultation_date DESC 
+            LIMIT 1
+        """, (patient_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0], result[1]  # consultation_id and consultation_date
+        return None, None
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
-        return None
+        return None, None
     finally:
         conn.close()
 
@@ -54,7 +63,6 @@ def fetch_diagnoses(patient_id):
         return None, None
     finally:
         conn.close()
-
 
 def fetch_diabetes_details(consultation_id):
     conn = sqlite3.connect('clinic.db')
@@ -86,6 +94,7 @@ def fetch_diabetes_details(consultation_id):
                 'oral_medication_details': json.loads(details[10]) if details[10] else None,
                 'non_insulin_injection_details': json.loads(details[11]) if details[11] else None,
             }
+            print("Fetched Insulin details:", diabetes_details['insulin_details'])
             return diabetes_details
         else:
             return None
@@ -125,41 +134,51 @@ def fetch_cv_risk_factors(consultation_id):
     finally:
         conn.close()
 
-                
-            
 def create_report(patient_id):
+    # Fetch Data
     patient_info = fetch_patient_info(patient_id)
     if not patient_info:
         print(f"Patient info not found for patient_id: {patient_id}")
         return
 
-    latest_consultation_id = fetch_latest_consultation_id(patient_id)
-    if latest_consultation_id:
-        
-        primary_diagnosis, secondary_diagnoses = fetch_diagnoses(patient_id)
-        diabetes_details = fetch_diabetes_details(latest_consultation_id) if latest_consultation_id else None
-        cv_risk_factors_details = fetch_cv_risk_factors(latest_consultation_id) if latest_consultation_id else None
-        # Append cardiovascular risk factors to diabetes details
-        if diabetes_details and cv_risk_factors_details:
-            diabetes_details['cv_risk_factors'] = cv_risk_factors_details
-        therapy = diabetes_details['therapy']
-        hcl_system = diabetes_details['hcl_system_details']
-        hba1c_current = diabetes_details['hba1c_current']
-        hba1c_previous = diabetes_details['hba1c_previous']
-        hba1c_previous_date = diabetes_details['hba1c_previous_date']
-        acute_complications = diabetes_details['acute_complications']
-        late_complications = diabetes_details['late_complications']
-        complications_score = diabetes_details['complications_score']
-        antibodies_status = diabetes_details['antibodies_status']
-        insulin_details = diabetes_details['insulin_details']
-        oral_medication = diabetes_details['oral_medication_details']
-        non_insulin_injection = diabetes_details['non_insulin_injection_details']
-        cv_risk_factors = diabetes_details['cv_risk_factors']
-        
+    latest_consultation_id, current_consultation_date_long = fetch_latest_consultation(patient_id)
+
+    # Convert consultation date to mm/yyyy format
+    current_consultation_date_short = None
+    if current_consultation_date_long:
+        date_parts = current_consultation_date_long.split('.')
+        if len(date_parts) == 3:
+            current_consultation_date_short = f"{date_parts[1]}/{date_parts[2]}"
+
+    primary_diagnosis, secondary_diagnoses = fetch_diagnoses(patient_id)
+    diabetes_details = fetch_diabetes_details(latest_consultation_id) if latest_consultation_id else None
+    cvrf_details = fetch_cv_risk_factors(latest_consultation_id) if latest_consultation_id else None
+
     # Patient Details
     patient_details = f"{patient_info[0]} {patient_info[1]}, {patient_info[2]}\n"
     patient_details += f"{patient_info[3]} {patient_info[4]}, {patient_info[5]}, {patient_info[6]}, {patient_info[7]}\n\n"
 
+    # Constructing Other Report Sections
+    diagnosis_section, therapy_section, acute_complications_section, cv_risk_factors_section, late_complications_section = construct_report_sections(diabetes_details, primary_diagnosis, secondary_diagnoses, current_consultation_date_short, cvrf_details)
+
+    # Combine all sections into the final report
+    report = patient_details + diagnosis_section + therapy_section + acute_complications_section + cv_risk_factors_section + late_complications_section
+
+    # Save Report to File
+    save_report_to_file(report, patient_id)
+
+def save_report_to_file(report, patient_id):
+    reports_dir = 'reports'
+    if not os.path.exists(reports_dir):
+        os.makedirs(reports_dir)
+
+    report_filename = os.path.join(reports_dir, f'report_patient_{patient_id}.txt')
+    with open(report_filename, 'w') as file:
+        file.write(report)
+    
+    print(f"Report for patient_id {patient_id} created as {report_filename}")
+
+def construct_report_sections(diabetes_details, primary_diagnosis, secondary_diagnoses, current_consultation_date_short, cvrf_details):
     # Diagnosis Section
     diagnosis_section = "Diagnosen\n"
     if primary_diagnosis:
@@ -169,13 +188,37 @@ def create_report(patient_id):
             if diabetes_details['antibodies_status']:
                 antibodies_pos = '-, '.join(diabetes_details['antibodies_status'].get('positive', []))
                 antibodies_neg = '-, '.join(diabetes_details['antibodies_status'].get('negative', []))
-                diagnosis_section += f"- {antibodies_pos}-Autoantikörper positiv, {antibodies_neg}-Autoantikörper negativ\n"
+                diagnosis_section += f"- {antibodies_pos}-Autoantikörper positiv; {antibodies_neg}-Autoantikörper negativ\n"
 
-    # Therapy Section
-    therapy_section = "Therapie\n"
-    if diabetes_details:
-        therapy_section += f"- {diabetes_details['therapy']}\n"
-        therapy_section += f"- HbA1c: {diabetes_details['hba1c_current']} % ({diabetes_details['hba1c_previous_date']})\n"
+            # Therapy Section
+            therapy_section = "Therapie\n"
+            if diabetes_details['therapy']:
+                therapy_section += f"- {diabetes_details['therapy']}"
+
+            # Add hcl_system details if present
+            if diabetes_details['hcl_system_details']:
+                therapy_section += f" ({diabetes_details['hcl_system_details']['system']}, Insulin {diabetes_details['hcl_system_details']['insulin']}, seit {diabetes_details['hcl_system_details']['start_year']})"
+
+            # Add insulin details if present
+            if diabetes_details['insulin_details']:
+                print("Insulin details:", diabetes_details['insulin_details'])
+                insulin_str = '; '.join([f"{insulin['type']} {insulin['insulin']} seit {insulin['start_year']}" 
+                                        for insulin in diabetes_details['insulin_details']])
+                therapy_section += f" ({insulin_str})"
+
+            # Add oral medication details if present
+            if diabetes_details['oral_medication_details']:
+                therapy_section += f" ({diabetes_details['oral_medication_details']})"
+
+            # Add non_insulin_injection details if present
+            if diabetes_details['non_insulin_injection_details']:
+                therapy_section += f" ({diabetes_details['non_insulin_injection_details']})"
+
+            # Add current and previous HbA1c values
+            therapy_section += f"\n- HbA1c {diabetes_details['hba1c_current']} % {current_consultation_date_short} ({diabetes_details['hba1c_previous']} % {diabetes_details['hba1c_previous_date']})\n"
+
+        therapy_section += "\n"
+
 
     # Acute Complications
     acute_complications_section = "Akutkomplikationen\n"
@@ -204,12 +247,21 @@ def create_report(patient_id):
     else:
         acute_complications_section += "- Keine\n"
 
-
-
     # Cardiovascular Risk Factors
     cv_risk_factors_section = "Weitere kardiovaskuläre Risikofaktoren\n"
-    if diabetes_details and diabetes_details['cv_risk_factors']:
-        cv_risk_factors_section += "- " + ', '.join([f"{factor}: {diabetes_details['cv_risk_factors'][factor]}" for factor in diabetes_details['cv_risk_factors']]) + "\n"
+    if cvrf_details:
+        cv_risk_factors_parts = []
+        for factor, value in cvrf_details.items():
+            if value is not None:
+                if factor == 'bmi':
+                    cv_risk_factors_parts.append(f"{factor}: {value:.1f}")  # Format BMI with one decimal place
+                else:
+                    cv_risk_factors_parts.append(f"{factor}: {value}")
+
+        if cv_risk_factors_parts:
+            cv_risk_factors_section += "- " + ', '.join(cv_risk_factors_parts) + "\n"
+        else:
+            cv_risk_factors_section += "- Keine\n"
     else:
         cv_risk_factors_section += "- Keine\n"
 
@@ -221,18 +273,11 @@ def create_report(patient_id):
     else:
         late_complications_section += "- Keine\n"
 
-    # Combine all sections into the final report
-    report = patient_details + diagnosis_section + therapy_section + acute_complications_section + cv_risk_factors_section + late_complications_section
-
-    # Write the report to a file
-    report_filename = f'report_patient_{patient_id}.txt'
-    with open(report_filename, 'w') as file:
-        file.write(report)
-    print(f"Report for patient_id {patient_id} created as {report_filename}")
+    return diagnosis_section, therapy_section, acute_complications_section, cv_risk_factors_section, late_complications_section
 
 def generate_reports_for_range(start_id, end_id):
     for patient_id in range(start_id, end_id + 1):
         create_report(patient_id)
 
-# Example usage: Generate reports for patient IDs from 20 to 50
-generate_reports_for_range(1, 9)
+# call to generate reports for patient IDs x through y
+generate_reports_for_range(2, 2)
