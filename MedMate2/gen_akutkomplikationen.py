@@ -62,50 +62,47 @@ def generate_spätkomplikationen(current_hba1c, pat_age, cvrisk_factors):
     return complications_score, late_complications
 
 def generate_hypo_awareness(prim_diagnosis_year):
-    acute_complications = ""
+    acute_complications = []
     clark_score = random.randint(0, 7)
 
     if random.choice([True, False]) and clark_score >= 4:
         date = generate_long_random_date_within_1_3_years()
-        clark_score_detail = f"Reduzierte Hypoglykämiewahrnehmung (Clark-Score {clark_score})"
-        acute_complications += f"{clark_score_detail}, Date: {date}; "
+        acute_complications.append({
+            'type': f"Reduzierte Hypoglykämiewahrnehmung (Clark-Score {clark_score})",
+            'date': date
+        })
 
     if random.choice([True, False]):
         num_events = random.randint(1, 3)
         for _ in range(num_events):
             date = generate_long_random_date_within_1_3_years()
             hypoglykemia_grade = random.choice(["II", "III"])
-            acute_complications += f"Hypoglykämie Grad {hypoglykemia_grade}, Date: {date}; "
-
-    # Trim the trailing "; " if acute_complications is not empty
-    if acute_complications:
-        acute_complications = acute_complications[:-2]
+            acute_complications.append({
+                'type': f"Hypoglykämie Grad {hypoglykemia_grade}",
+                'date': date
+            })
 
     return acute_complications
 
 def generate_ketoacidosis(prim_diagnosis_year):
-    acute_complications = ""
+    acute_complications = []
 
     if random.choice([True, False]):
         num_events = random.randint(1, 3)
         for _ in range(num_events):
             date = generate_long_random_date_within_1_3_years()
-            acute_complications += f"Diabetische Ketoazidose, Date: {date}; "
-
-    # Trim the trailing "; " if acute_complications is not empty
-    if acute_complications:
-        acute_complications = acute_complications[:-2]
+            acute_complications.append({
+                'type': "Diabetische Ketoazidose",
+                'date': date
+            })
 
     return acute_complications
 
 if __name__ == "__main__":
     prim_diagnosis_year = 1999
-    all_acute_complications = ""
+    all_acute_complications = []
 
-    all_acute_complications += generate_hypo_awareness(prim_diagnosis_year) + "; "
-    all_acute_complications += generate_ketoacidosis(prim_diagnosis_year) + "; "
+    all_acute_complications.extend(generate_hypo_awareness(prim_diagnosis_year))
+    all_acute_complications.extend(generate_ketoacidosis(prim_diagnosis_year))
 
-    # Trim the trailing "; " if all_acute_complications is not empty
-    all_acute_complications = all_acute_complications.rstrip("; ")
-    all_acute_complications = all_acute_complications.lstrip("; ")
     print("Acute Complications: ", all_acute_complications)

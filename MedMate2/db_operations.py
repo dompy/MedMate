@@ -73,6 +73,7 @@ def create_database():
         hcl_system_details TEXT,
         hba1c_current REAL,
         hba1c_previous REAL,
+        hba1c_previous_date TEXT,
         akutkomplikationen TEXT, 
         spätkomplikationen TEXT,
         complications_score INTEGER,
@@ -196,7 +197,7 @@ def add_diagnosis(consultation_id, diagnosis_name, diagnosis_date, diagnosis_typ
 def add_diabetes_details(consultation_id, therapy, antibodies_status, hcl_system_details, insulin_details, 
                          oral_medication_details, non_insulin_injection_details, 
                          complications_score, spätkomplikationen, hba1c_current, 
-                         hba1c_previous, akutkomplikationen):
+                         hba1c_previous, hba1c_previous_date, akutkomplikationen):
     conn = sqlite3.connect('clinic.db')
     cursor = conn.cursor()
 
@@ -213,11 +214,11 @@ def add_diabetes_details(consultation_id, therapy, antibodies_status, hcl_system
         
         cursor.execute('''
         INSERT INTO diabetes_details (consultation_id, therapy, hcl_system_details, hba1c_current, 
-                                      hba1c_previous, akutkomplikationen, spätkomplikationen, 
+                                      hba1c_previous, hba1c_previous_date, akutkomplikationen, spätkomplikationen, 
                                       complications_score, antibodies_status, insulin_details, oral_medication_details, 
                                       non_insulin_injection_details)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (consultation_id, therapy_str, hcl_system_details_str, hba1c_current, hba1c_previous, akutkomplikationen_str, 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (consultation_id, therapy_str, hcl_system_details_str, hba1c_current, hba1c_previous, hba1c_previous_date, akutkomplikationen_str, 
               spätkomplikationen_str, complications_score, antibodies_status_str, 
               insulin_details_str, oral_medication_details_str, non_insulin_injection_details_str))
 

@@ -14,10 +14,10 @@ def generate_common_details():
     # HbA1c values
     current_month = datetime.now().month
     current_year = datetime.now().year
-    current_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
-    previous_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
-    previous_hba1c_date = generate_previous_hba1c_date(previous_hba1c, current_month, current_year)
-    return prim_diagnosis_year, prim_diagnosis_month, current_month, current_year, current_hba1c, previous_hba1c, previous_hba1c_date
+    hba1c_current = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
+    hba1c_previous = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
+    hba1c_previous_date = generate_previous_hba1c_date(hba1c_previous, current_month, current_year)
+    return prim_diagnosis_year, prim_diagnosis_month, current_month, current_year, hba1c_current, hba1c_previous, hba1c_previous_date
     
 def generate_previous_hba1c_date(prev_hba1c, current_month, current_year):
     # Determine the interval and unit (weeks/months) based on the previous HbA1c
@@ -128,8 +128,7 @@ def process_type2_diabetes_details(diagnosis_details, all_diagnosis_options, dia
 
 def generate_details_based_on_diagnosis(primary_diagnosis, pat_age, current_month, current_year):
     # Generate common details
-    prim_diagnosis_year, prim_diagnosis_month, _, _, current_hba1c, previous_hba1c, previous_hba1c_date = generate_common_details()
-
+    prim_diagnosis_year, prim_diagnosis_month, _, _, hba1c_current, hba1c_previous, hba1c_previous_date = generate_common_details()
     # Initialize diagnosis details dictionary
     diagnosis_details = {
         'therapy': [],
@@ -140,9 +139,9 @@ def generate_details_based_on_diagnosis(primary_diagnosis, pat_age, current_mont
         'non_insulin_injection_details': [],
         'akutkomplikationen': [],
         'spätkomplikationen': [],
-        'hba1c_current': current_hba1c,
-        'hba1c_previous': previous_hba1c,
-        'previous_hba1c_date': previous_hba1c_date,
+        'hba1c_current': hba1c_current,
+        'hba1c_previous': hba1c_previous,
+        'hba1c_previous_date': hba1c_previous_date,
         'cvrisk_factors': generate_cvrisk_factors(pat_age)  # Moved CV risk factors generation here
     }
 
@@ -156,7 +155,7 @@ def generate_details_based_on_diagnosis(primary_diagnosis, pat_age, current_mont
         process_type2_diabetes_details(diagnosis_details, all_diagnosis_options, prim_diagnosis_year)
 
     # Generate complications and add them to the dictionary
-    complications_score, spätkomplikationen = generate_spätkomplikationen(current_hba1c, pat_age, diagnosis_details['cvrisk_factors'])
+    complications_score, spätkomplikationen = generate_spätkomplikationen(hba1c_current, pat_age, diagnosis_details['cvrisk_factors'])
     akutkomplikationen = generate_hypo_awareness(prim_diagnosis_year) + generate_ketoacidosis(prim_diagnosis_year)
 
     diagnosis_details.update({
@@ -173,14 +172,14 @@ if __name__ == '__main__':
     bmi = 35
     current_month = datetime.now().month
     current_year = datetime.now().year
-    current_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
-    previous_hba1c = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
+    hba1c_current = round(random.uniform(4.5, 12.9), 1)  # Generate current hba1c
+    hba1c_previous = round(random.uniform(4.5, 12.9), 1)  # Generate previous hba1c
     complications_score = random.uniform(1-12, 1)
     spätkomplikationen = None
     primary_diagnosis = "Diabetes Mellitus Typ 1"
     prim_diagnosis_year = 1999
     prim_diagnosis_month = 6
     pat_age = 33
-    previous_hba1c_date = generate_previous_hba1c_date(previous_hba1c, current_month, current_year)   
-    generate_details_based_on_diagnosis(primary_diagnosis, 50, 1990, 5, current_month, current_year, current_hba1c, previous_hba1c, previous_hba1c_date)
+    hba1c_previous_date = generate_previous_hba1c_date(hba1c_previous, current_month, current_year)   
+    generate_details_based_on_diagnosis(primary_diagnosis, 50, current_month, current_year)
     #print("generate_prim_diagnosis_details: ", generate_prim_diagnosis_details(primary_diagnosis, prim_diagnosis_year, prim_diagnosis_month, pat_age, current_month, current_year, current_hba1c, previous_hba1c, previous_hba1c_date))

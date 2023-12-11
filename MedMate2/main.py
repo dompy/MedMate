@@ -5,7 +5,7 @@ from gen_cv_risk_factors import generate_cvrisk_factors
 
 def main():
     create_database()
-    num_patients = 20
+    num_patients = 500
     patients_data, consultations_data, primary_diagnoses_data, secondary_diagnoses_data, diabetes_diagnosis_details_data, all_acute_complications, all_late_complications, complication_score = generate_all_data(num_patients)
     for patient, consultation_date, primary_diagnosis_dict, sec_diagnoses_list, diabetes_detail in zip(patients_data, consultations_data, primary_diagnoses_data, secondary_diagnoses_data, diabetes_diagnosis_details_data):
         patient_id = add_patient(patient)
@@ -31,6 +31,7 @@ def main():
                 diabetes_detail['spätkomplikationen'],
                 diabetes_detail['hba1c_current'],
                 diabetes_detail['hba1c_previous'],
+                diabetes_detail['hba1c_previous_date'],
                 diabetes_detail['akutkomplikationen']
             )
 
